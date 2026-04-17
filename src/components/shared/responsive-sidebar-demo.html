@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Responsive Sidebar with Three-Dot Toggle</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background-color: #f3f4f6;
+            min-height: 100vh;
+        }
+
+        /* Toggle Button - Vertical Three Dots */
+        .sidebar-toggle {
+            position: fixed;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            z-index: 50;
+            background-color: #111827;
+            color: white;
+            padding: 12px;
+            border-radius: 0 8px 8px 0;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: all 0.3s ease-in-out;
+            cursor: pointer;
+            border: none;
+            outline: none;
+        }
+
+        .sidebar-toggle:hover {
+            background-color: #1f2937;
+        }
+
+        .sidebar-toggle:focus {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+
+        .sidebar-toggle.open {
+            transform: translateY(-50%) translateX(256px);
+        }
+
+        /* Three dots icon */
+        .three-dots {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .dot {
+            width: 6px;
+            height: 6px;
+            background-color: white;
+            border-radius: 50%;
+        }
+
+        /* Close icon */
+        .close-icon {
+            display: none;
+            width: 24px;
+            height: 24px;
+        }
+
+        .sidebar-toggle.open .three-dots {
+            display: none;
+        }
+
+        .sidebar-toggle.open .close-icon {
+            display: block;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 256px;
+            height: 100vh;
+            background-color: #111827;
+            color: white;
+            z-index: 40;
+            transform: translateX(-100%);
+            transition: transform 0.3s ease-in-out;
+            box-shadow: 4px 0 6px -1px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .sidebar.open {
+            transform: translateX(0);
+        }
+
+        /* Sidebar Header */
+        .sidebar-header {
+            padding: 24px;
+            border-bottom: 1px solid #1f2937;
+        }
+
+        .logo-container {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .logo-text h1 {
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .logo-text p {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        /* Navigation */
+        .sidebar-nav {
+            flex: 1;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        .nav-list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .nav-item a {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 16px;
+            border-radius: 8px;
+            color: #d1d5db;
+            text-decoration: none;
+            transition: all 0.2s ease;
+        }
+
+        .nav-item a:hover {
+            background-color: #1f2937;
+            color: white;
+        }
+
+        .nav-item a.active {
+            background-color: #3b82f6;
+            color: white;
+            box-shadow: 0 4px 6px -1px rgba(59, 130, 246, 0.3);
+        }
+
+        .nav-icon {
+            width: 20px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+
+        /* Sidebar Footer */
+        .sidebar-footer {
+            padding: 24px;
+            border-top: 1px solid #1f2937;
+            text-align: center;
+        }
+
+        .sidebar-footer p {
+            font-size: 14px;
+            color: #9ca3af;
+        }
+
+        /* Overlay */
+        .overlay {
+            position: fixed;
+            inset: 0;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 30;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease-in-out;
+        }
+
+        .overlay.open {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        /* Main Content */
+        .main-content {
+            padding: 24px;
+            margin-left: 0;
+            transition: margin-left 0.3s ease-in-out;
+        }
+
+        .main-content.shifted {
+            margin-left: 256px;
+        }
+
+        .content-card {
+            background: white;
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            max-width: 800px;
+        }
+
+        .content-card h1 {
+            font-size: 32px;
+            margin-bottom: 16px;
+            color: #111827;
+        }
+
+        .content-card p {
+            color: #6b7280;
+            line-height: 1.6;
+            margin-bottom: 16px;
+        }
+
+        /* Responsive Design */
+        @media (min-width: 768px) {
+            .main-content.shifted {
+                margin-left: 256px;
+            }
+        }
+
+        @media (max-width: 767px) {
+            .main-content.shifted {
+                margin-left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Toggle Button -->
+    <button class="sidebar-toggle" id="sidebarToggle" aria-label="Open sidebar">
+        <div class="three-dots">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+        </div>
+        <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+    </button>
+
+    <!-- Sidebar -->
+    <aside class="sidebar" id="sidebar">
+        <!-- Header -->
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <div class="logo-icon">E</div>
+                <div class="logo-text">
+                    <h1>EduDock</h1>
+                    <p>Educational Platform</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <nav class="sidebar-nav">
+            <ul class="nav-list">
+                <li class="nav-item">
+                    <a href="#" class="nav-link active" data-page="dashboard">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="3" width="7" height="7"></rect>
+                            <rect x="14" y="14" width="7" height="7"></rect>
+                            <rect x="3" y="14" width="7" height="7"></rect>
+                        </svg>
+                        <span>Dashboard</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="pdfs">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                            <polyline points="14 2 14 8 20 8"></polyline>
+                            <line x1="16" y1="13" x2="8" y2="13"></line>
+                            <line x1="16" y1="17" x2="8" y2="17"></line>
+                            <polyline points="10 9 9 9 8 9"></polyline>
+                        </svg>
+                        <span>Manage PDFs</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="updates">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"></path>
+                        </svg>
+                        <span>Manage Updates</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="tools">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path>
+                        </svg>
+                        <span>Manage Tools</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="categories">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span>Manage Categories</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="#" class="nav-link" data-page="messages">
+                        <svg class="nav-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                        </svg>
+                        <span>Messages</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <!-- Footer -->
+        <div class="sidebar-footer">
+            <p>EduDock Educational Platform</p>
+            <p style="margin-top: 4px;">v1.0.0</p>
+        </div>
+    </aside>
+
+    <!-- Overlay -->
+    <div class="overlay" id="overlay"></div>
+
+    <!-- Main Content -->
+    <main class="main-content" id="mainContent">
+        <div class="content-card">
+            <h1>Responsive Sidebar Demo</h1>
+            <p>This is a demonstration of a responsive sidebar component with a vertical three-dot toggle icon.</p>
+            <p><strong>Features:</strong></p>
+            <ul style="margin-left: 20px; color: #6b7280; line-height: 1.8;">
+                <li>Vertical three-dot icon serves as the toggle control</li>
+                <li>Sidebar is initially hidden from view</li>
+                <li>Smooth CSS transitions for slide-in/out animations</li>
+                <li>Sidebar remains anchored to the viewport</li>
+                <li>Click toggle to reverse animation and hide sidebar</li>
+                <li>Click outside sidebar to close it</li>
+                <li>Responsive design for mobile and desktop</li>
+            </ul>
+            <p style="margin-top: 16px;">Click the three-dot icon on the left edge of the screen to open the sidebar!</p>
+        </div>
+    </main>
+
+    <script>
+        // DOM Elements
+        const sidebarToggle = document.getElementById('sidebarToggle');
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('overlay');
+        const mainContent = document.getElementById('mainContent');
+        const navLinks = document.querySelectorAll('.nav-link');
+
+        // State
+        let isOpen = false;
+
+        // Toggle sidebar function
+        function toggleSidebar() {
+            isOpen = !isOpen;
+            updateSidebarState();
+        }
+
+        // Update sidebar state
+        function updateSidebarState() {
+            if (isOpen) {
+                sidebar.classList.add('open');
+                sidebarToggle.classList.add('open');
+                overlay.classList.add('open');
+                mainContent.classList.add('shifted');
+                sidebarToggle.setAttribute('aria-label', 'Close sidebar');
+            } else {
+                sidebar.classList.remove('open');
+                sidebarToggle.classList.remove('open');
+                overlay.classList.remove('open');
+                mainContent.classList.remove('shifted');
+                sidebarToggle.setAttribute('aria-label', 'Open sidebar');
+            }
+        }
+
+        // Close sidebar function
+        function closeSidebar() {
+            isOpen = false;
+            updateSidebarState();
+        }
+
+        // Event Listeners
+        sidebarToggle.addEventListener('click', toggleSidebar);
+        overlay.addEventListener('click', closeSidebar);
+
+        // Handle navigation clicks
+        navLinks.forEach(link => {
+            link.addEventListener('click', (e) => {
+                e.preventDefault();
+                
+                // Remove active class from all links
+                navLinks.forEach(l => l.classList.remove('active'));
+                
+                // Add active class to clicked link
+                link.classList.add('active');
+                
+                // Close sidebar on mobile
+                if (window.innerWidth < 768) {
+                    closeSidebar();
+                }
+            });
+        });
+
+        // Handle escape key to close sidebar
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && isOpen) {
+                closeSidebar();
+            }
+        });
+
+        // Handle window resize
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768 && isOpen) {
+                // Keep sidebar open on desktop
+                mainContent.classList.add('shifted');
+            } else {
+                // Remove shift on mobile
+                mainContent.classList.remove('shifted');
+            }
+        });
+    </script>
+</body>
+</html>
