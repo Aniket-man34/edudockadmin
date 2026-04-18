@@ -7,19 +7,17 @@ import {
   Wrench,
   Folder,
   MessageSquare,
-  MoreVertical,
   X
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 const ResponsiveSidebar: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
 
   // Check screen size on mount and resize
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768)
+      // Removed isMobile logic
     }
 
     checkScreenSize()
@@ -33,20 +31,21 @@ const ResponsiveSidebar: React.FC = () => {
     const handleClickOutside = (event: MouseEvent) => {
       const sidebar = document.getElementById('responsive-sidebar')
       const toggle = document.getElementById('sidebar-toggle')
-      
-      if (sidebar && toggle && 
-          !sidebar.contains(event.target as Node) && 
-          !toggle.contains(event.target as Node)) {
+
+      if (
+        sidebar &&
+        toggle &&
+        !sidebar.contains(event.target as Node) &&
+        !toggle.contains(event.target as Node)
+      ) {
         setIsOpen(false)
       }
     }
 
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside)
-    }
+    document.addEventListener('mousedown', handleClickOutside)
 
     return () => document.removeEventListener('mousedown', handleClickOutside)
-  }, [isOpen])
+  }, [])
 
   const navItems = [
     {
