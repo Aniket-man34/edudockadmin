@@ -353,36 +353,36 @@ const UpdatesManager: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Updates</h1>
-          <p className="text-gray-600">Create and manage platform updates and announcements</p>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Manage Updates</h1>
+          <p className="text-sm md:text-base text-gray-600">Create and manage platform updates</p>
         </div>
-        <Button onClick={openAddDialog}>
+        <Button onClick={openAddDialog} className="min-h-[44px] w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add New Update
         </Button>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search updates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 min-h-[44px]"
             />
           </div>
-          <div className="relative w-48">
+          <div className="relative w-full sm:w-48">
             <Folder className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <select
               value={selectedCategoryFilter}
               onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 min-h-[44px] border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -392,27 +392,27 @@ const UpdatesManager: React.FC = () => {
               ))}
             </select>
           </div>
-          <Button variant="outline">
+          <Button variant="outline" className="hidden md:inline-flex min-h-[44px]">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="hidden md:inline-flex min-h-[44px]">
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
       </div>
 
       {/* Updates Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Preview</TableHead>
+              <TableHead className="w-16 md:w-20">Preview</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Content</TableHead>
-              <TableHead>External URL</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="hidden md:table-cell">Content</TableHead>
+              <TableHead className="hidden sm:table-cell">External URL</TableHead>
+              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -448,9 +448,9 @@ const UpdatesManager: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{update.title}</TableCell>
-                  <TableCell className="max-w-xs truncate">{update.content}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium max-w-[160px] sm:max-w-none truncate">{update.title}</TableCell>
+                  <TableCell className="hidden md:table-cell max-w-xs truncate">{update.content}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {update.external_url ? (
                       <a
                         href={update.external_url}
@@ -465,16 +465,17 @@ const UpdatesManager: React.FC = () => {
                       <span className="text-xs text-gray-400">—</span>
                     )}
                   </TableCell>
-                  <TableCell>{formatDate(update.created_at)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatDate(update.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button variant="ghost" size="icon">
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
+                      <Button variant="ghost" size="icon" className="min-h-[44px] min-w-[44px]">
                         <Eye className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(update)}
+                        className="min-h-[44px] min-w-[44px]"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -482,7 +483,7 @@ const UpdatesManager: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(update.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="min-h-[44px] min-w-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -496,20 +497,20 @@ const UpdatesManager: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="mt-8 grid grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-sm text-blue-600">Total Updates</p>
-          <p className="text-2xl font-bold">{updates.length}</p>
+      <div className="mt-6 md:mt-8 grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-blue-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-blue-600">Total Updates</p>
+          <p className="text-lg md:text-2xl font-bold">{updates.length}</p>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-sm text-green-600">With Images</p>
-          <p className="text-2xl font-bold">
+        <div className="bg-green-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-green-600">With Images</p>
+          <p className="text-lg md:text-2xl font-bold">
             {updates.filter((u) => u.image_url).length}
           </p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <p className="text-sm text-purple-600">This Month</p>
-          <p className="text-2xl font-bold">
+        <div className="bg-purple-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-purple-600">This Month</p>
+          <p className="text-lg md:text-2xl font-bold">
             {updates.filter((u) => {
               const d = new Date(u.created_at)
               const now = new Date()

@@ -242,25 +242,25 @@ const CategoriesManager: React.FC = () => {
   }
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Categories</h1>
-          <p className="text-gray-600">Create and manage categories for PDFs, Updates, and Tools</p>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Manage Categories</h1>
+          <p className="text-sm md:text-base text-gray-600">Create and manage categories</p>
         </div>
-        <Button onClick={openAddDialog}>
+        <Button onClick={openAddDialog} className="min-h-[44px] w-full sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Add Category
         </Button>
       </div>
 
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead>Name</TableHead>
-              <TableHead>Entity Type</TableHead>
-              <TableHead>Created At</TableHead>
+              <TableHead className="hidden sm:table-cell">Entity Type</TableHead>
+              <TableHead className="hidden lg:table-cell">Created At</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -282,20 +282,29 @@ const CategoriesManager: React.FC = () => {
             ) : (
               categories.map((category) => (
                 <TableRow key={category.id}>
-                  <TableCell className="font-medium">{category.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium max-w-[160px] sm:max-w-none truncate">
+                    <div className="flex items-center gap-2">
+                      <span>{category.name}</span>
+                      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getEntityTypeColor(category.entity_type)} sm:hidden`}>
+                        {getEntityTypeIcon(category.entity_type)}
+                        <span className="capitalize">{category.entity_type}</span>
+                      </span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${getEntityTypeColor(category.entity_type)}`}>
                       {getEntityTypeIcon(category.entity_type)}
                       <span className="capitalize">{category.entity_type}</span>
                     </span>
                   </TableCell>
-                  <TableCell>{formatDate(category.created_at)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatDate(category.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
                       <Button
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(category)}
+                        className="min-h-[44px] min-w-[44px]"
                         title="Edit"
                       >
                         <Edit className="h-4 w-4" />
@@ -303,7 +312,7 @@ const CategoriesManager: React.FC = () => {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="min-h-[44px] min-w-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
                         onClick={() => handleDelete(category.id)}
                         title="Delete"
                       >

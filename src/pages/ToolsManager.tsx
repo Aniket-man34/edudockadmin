@@ -407,36 +407,36 @@ const ToolsManager: React.FC = () => {
   )
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage Tools</h1>
-          <p className="text-gray-600">Add and manage educational tools and resources</p>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Manage Tools</h1>
+          <p className="text-sm md:text-base text-gray-600">Add and manage educational tools</p>
         </div>
-        <Button onClick={openAddDialog}>
+        <Button onClick={openAddDialog} className="min-h-[44px] w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Add New Tool
         </Button>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search tools..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 min-h-[44px]"
             />
           </div>
-          <div className="relative w-48">
+          <div className="relative w-full sm:w-48">
             <Folder className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <select
               value={selectedCategoryFilter}
               onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 min-h-[44px] border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -446,28 +446,28 @@ const ToolsManager: React.FC = () => {
               ))}
             </select>
           </div>
-          <Button variant="outline">
+          <Button variant="outline" className="hidden md:inline-flex min-h-[44px]">
             <Filter className="mr-2 h-4 w-4" />
             Filter
           </Button>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="hidden md:inline-flex min-h-[44px]">
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
       </div>
 
       {/* Tools Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Preview</TableHead>
+              <TableHead className="w-16 md:w-20">Preview</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>URL</TableHead>
-              <TableHead>Image Source</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="hidden md:table-cell">Description</TableHead>
+              <TableHead className="hidden sm:table-cell">URL</TableHead>
+              <TableHead className="hidden lg:table-cell">Image Source</TableHead>
+              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>

@@ -499,36 +499,36 @@ const PdfsManager: React.FC = () => {
   )
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Manage PDFs</h1>
-          <p className="text-gray-600">Upload and manage PDF resources</p>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Manage PDFs</h1>
+          <p className="text-sm md:text-base text-gray-600">Upload and manage PDF resources</p>
         </div>
-        <Button onClick={openAddDialog}>
+        <Button onClick={openAddDialog} className="min-h-[44px] w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" />
           Upload New PDF
         </Button>
       </div>
 
       {/* Search and Filters */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center space-x-4">
-          <div className="relative w-64">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4 md:mb-6 gap-3">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 flex-1">
+          <div className="relative w-full sm:w-64">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <Input
               placeholder="Search PDFs..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
+              className="pl-10 min-h-[44px]"
             />
           </div>
-          <div className="relative w-48">
+          <div className="relative w-full sm:w-48">
             <Folder className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <select
               value={selectedCategoryFilter}
               onChange={(e) => setSelectedCategoryFilter(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full pl-10 pr-4 py-2 min-h-[44px] border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Categories</option>
               {categories.map((cat) => (
@@ -539,22 +539,22 @@ const PdfsManager: React.FC = () => {
             </select>
           </div>
         </div>
-        <Button variant="outline">
+        <Button variant="outline" className="hidden md:inline-flex min-h-[44px]">
           <Download className="mr-2 h-4 w-4" />
           Export
         </Button>
       </div>
 
       {/* PDFs Table */}
-      <div className="border rounded-lg">
+      <div className="border rounded-lg overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-20">Cover</TableHead>
+              <TableHead className="w-16 md:w-20">Cover</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Date</TableHead>
+              <TableHead className="hidden md:table-cell">Description</TableHead>
+              <TableHead className="hidden sm:table-cell">Source</TableHead>
+              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -590,9 +590,9 @@ const PdfsManager: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{pdf.title}</TableCell>
-                  <TableCell className="max-w-xs truncate">{pdf.description}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium max-w-[160px] sm:max-w-none truncate">{pdf.title}</TableCell>
+                  <TableCell className="hidden md:table-cell max-w-xs truncate">{pdf.description}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
                       pdf.file_type === 'drive'
                         ? 'bg-green-100 text-green-700'
@@ -605,11 +605,11 @@ const PdfsManager: React.FC = () => {
                       )}
                     </span>
                   </TableCell>
-                  <TableCell>{formatDate(pdf.created_at)}</TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatDate(pdf.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
                       {pdf.file_url && (
-                        <Button variant="ghost" size="icon" asChild>
+                        <Button variant="ghost" size="icon" asChild className="min-h-[44px] min-w-[44px]">
                           <a href={pdf.file_url} target="_blank" rel="noopener noreferrer">
                             <Eye className="h-4 w-4" />
                           </a>
@@ -619,6 +619,7 @@ const PdfsManager: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(pdf)}
+                        className="min-h-[44px] min-w-[44px]"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -626,7 +627,7 @@ const PdfsManager: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(pdf.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="min-h-[44px] min-w-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -640,20 +641,20 @@ const PdfsManager: React.FC = () => {
       </div>
 
       {/* Stats */}
-      <div className="mt-8 grid grid-cols-3 gap-4">
-        <div className="bg-blue-50 p-4 rounded-lg">
-          <p className="text-sm text-blue-600">Total PDFs</p>
-          <p className="text-2xl font-bold">{pdfs.length}</p>
+      <div className="mt-6 md:mt-8 grid grid-cols-3 gap-2 md:gap-4">
+        <div className="bg-blue-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-blue-600">Total PDFs</p>
+          <p className="text-lg md:text-2xl font-bold">{pdfs.length}</p>
         </div>
-        <div className="bg-green-50 p-4 rounded-lg">
-          <p className="text-sm text-green-600">With Covers</p>
-          <p className="text-2xl font-bold">
+        <div className="bg-green-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-green-600">With Covers</p>
+          <p className="text-lg md:text-2xl font-bold">
             {pdfs.filter((p) => p.cover_image_url).length}
           </p>
         </div>
-        <div className="bg-purple-50 p-4 rounded-lg">
-          <p className="text-sm text-purple-600">This Month</p>
-          <p className="text-2xl font-bold">
+        <div className="bg-purple-50 p-3 md:p-4 rounded-lg">
+          <p className="text-xs md:text-sm text-purple-600">This Month</p>
+          <p className="text-lg md:text-2xl font-bold">
             {pdfs.filter((p) => {
               const d = new Date(p.created_at)
               const now = new Date()

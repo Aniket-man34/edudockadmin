@@ -148,11 +148,11 @@ const Dashboard: React.FC = () => {
   }))
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-4 md:p-6">
+      <div className="flex items-center justify-between mb-4 md:mb-8">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-600">Welcome to EduDock Educational Platform Admin</p>
+          <h1 className="text-xl md:text-3xl font-bold text-gray-900">Dashboard</h1>
+          <p className="text-sm md:text-base text-gray-600">Welcome to EduDock Admin</p>
         </div>
       </div>
 
@@ -164,21 +164,21 @@ const Dashboard: React.FC = () => {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-6 md:mb-8">
             {statCards.map((stat) => (
               <div
                 key={stat.title}
-                className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                className="bg-white rounded-xl border border-gray-200 p-3 md:p-6 shadow-sm cursor-pointer hover:shadow-md transition-shadow min-h-[44px]"
                 onClick={() => stat.navigateTo !== '#' && navigate(stat.navigateTo)}
               >
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.title}</p>
-                    <p className="text-3xl font-bold mt-2">{stat.value}</p>
-                    <p className="text-sm text-gray-500 mt-1">{stat.subtitle}</p>
+                <div className="flex items-center justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="text-xs md:text-sm font-medium text-gray-600 truncate">{stat.title}</p>
+                    <p className="text-xl md:text-3xl font-bold mt-1 md:mt-2">{stat.value}</p>
+                    <p className="text-xs md:text-sm text-gray-500 mt-0.5 md:mt-1 truncate">{stat.subtitle}</p>
                   </div>
-                  <div className={`${stat.color} p-3 rounded-lg`}>
-                    <stat.icon className="h-6 w-6 text-white" />
+                  <div className={`${stat.color} p-2 md:p-3 rounded-lg flex-shrink-0`}>
+                    <stat.icon className="h-4 w-4 md:h-6 md:w-6 text-white" />
                   </div>
                 </div>
               </div>
@@ -186,17 +186,17 @@ const Dashboard: React.FC = () => {
           </div>
 
           {/* Visitor Analytics Chart */}
-          <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm mb-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold">Visitor Analytics</h2>
-              <div className="flex items-center space-x-2">
+          <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm mb-6 md:mb-8">
+            <div className="flex items-center justify-between mb-4 md:mb-6 gap-2">
+              <h2 className="text-lg md:text-xl font-bold">Visitor Analytics</h2>
+              <div className="flex items-center space-x-2 flex-shrink-0">
                 <div className="h-2 w-2 bg-blue-500 rounded-full"></div>
-                <span className="text-sm text-gray-600">Last 6 months</span>
+                <span className="text-xs md:text-sm text-gray-600">Last 6 months</span>
               </div>
             </div>
             
             {chartData.length > 0 ? (
-              <div className="h-80">
+              <div className="h-64 md:h-80">
                 <ResponsiveContainer width="100%" height="100%">
                   <LineChart
                     data={chartData}
@@ -229,7 +229,7 @@ const Dashboard: React.FC = () => {
                 </ResponsiveContainer>
               </div>
             ) : (
-              <div className="h-80 flex items-center justify-center">
+              <div className="h-64 md:h-80 flex items-center justify-center">
                 <div className="text-center">
                   <Users className="h-12 w-12 text-gray-300 mx-auto mb-4" />
                   <p className="text-gray-500">No analytics data available</p>
@@ -242,45 +242,45 @@ const Dashboard: React.FC = () => {
       )}
 
       {/* Quick Links */}
-      <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <h2 className="text-xl font-bold mb-6">Quick Actions</h2>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm">
+        <h2 className="text-lg md:text-xl font-bold mb-4 md:mb-6">Quick Actions</h2>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
           <Button
-            className="h-24 flex flex-col items-center justify-center p-4"
+            className="h-20 md:h-24 flex flex-col items-center justify-center p-3 md:p-4"
             onClick={() => navigate('/pdfs')}
           >
-            <FileText className="h-8 w-8 mb-2" />
-            <span>Manage PDFs</span>
+            <FileText className="h-6 w-6 md:h-8 md:w-8 mb-1 md:mb-2" />
+            <span className="text-sm md:text-base">Manage PDFs</span>
           </Button>
           <Button
             variant="outline"
-            className="h-24 flex flex-col items-center justify-center p-4"
+            className="h-20 md:h-24 flex flex-col items-center justify-center p-3 md:p-4"
             onClick={() => navigate('/updates')}
           >
-            <Megaphone className="h-8 w-8 mb-2" />
-            <span>Manage Updates</span>
+            <Megaphone className="h-6 w-6 md:h-8 md:w-8 mb-1 md:mb-2" />
+            <span className="text-sm md:text-base">Manage Updates</span>
           </Button>
           <Button
             variant="outline"
-            className="h-24 flex flex-col items-center justify-center p-4"
+            className="h-20 md:h-24 flex flex-col items-center justify-center p-3 md:p-4"
             onClick={() => navigate('/tools')}
           >
-            <Wrench className="h-8 w-8 mb-2" />
-            <span>Manage Tools</span>
+            <Wrench className="h-6 w-6 md:h-8 md:w-8 mb-1 md:mb-2" />
+            <span className="text-sm md:text-base">Manage Tools</span>
           </Button>
         </div>
       </div>
 
       {/* System Status */}
-      <div className="mt-8 bg-white rounded-xl border border-gray-200 p-6 shadow-sm">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-bold">System Status</h2>
+      <div className="mt-6 md:mt-8 bg-white rounded-xl border border-gray-200 p-4 md:p-6 shadow-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+          <h2 className="text-lg md:text-xl font-bold">System Status</h2>
           <div className="flex items-center space-x-2">
             <div className="h-2 w-2 bg-green-500 rounded-full"></div>
-            <span className="text-sm text-green-600">All Systems Operational</span>
+            <span className="text-xs md:text-sm text-green-600">All Systems Operational</span>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
           <div className="p-4 bg-blue-50 rounded-lg">
             <p className="font-medium">Database</p>
             <p className="text-sm text-gray-600">Supabase connection ready</p>

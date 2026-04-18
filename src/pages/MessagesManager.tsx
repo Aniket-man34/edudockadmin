@@ -232,13 +232,13 @@ const MessagesManager: React.FC = () => {
   return (
     <div className="flex flex-col h-screen">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 px-6 py-4">
+      <div className="bg-white border-b border-gray-200 px-3 md:px-6 py-3 md:py-4">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
             <MessageSquare className="h-6 w-6 text-blue-600" />
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Messages</h1>
-              <p className="text-sm text-gray-600">
+              <h1 className="text-lg md:text-2xl font-bold text-gray-900">Admin Messages</h1>
+              <p className="text-xs md:text-sm text-gray-600">
                 {unreadCount > 0 ? `${unreadCount} unread` : 'All messages read'}
               </p>
             </div>
@@ -247,7 +247,7 @@ const MessagesManager: React.FC = () => {
       </div>
 
       {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-3 md:p-6 bg-gray-50">
         {loading ? (
           <div className="flex items-center justify-center h-full">
             <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
@@ -303,13 +303,13 @@ const MessagesManager: React.FC = () => {
                       </p>
                     )}
                     {/* Message Text */}
-                    <p className="text-sm leading-relaxed whitespace-pre-wrap break-words">
+                    <p className="text-sm md:text-base leading-relaxed whitespace-pre-wrap break-words">
                       {message.content}
                     </p>
                   </div>
 
                   {/* Timestamp and Actions */}
-                  <div className="flex items-center space-x-2 mt-1">
+                  <div className="flex items-center gap-1 md:gap-2 mt-1">
                     <span className="text-xs text-gray-500">
                       {formatDate(message.created_at)}
                     </span>
@@ -323,7 +323,7 @@ const MessagesManager: React.FC = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-6 w-6 text-gray-400 hover:text-red-600"
+                          className="h-6 w-6 md:h-8 md:w-8 text-gray-400 hover:text-red-600 min-h-[44px] min-w-[44px]"
                           onClick={() => handleDeleteMessage(message.id)}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -340,24 +340,24 @@ const MessagesManager: React.FC = () => {
       </div>
 
       {/* Message Input */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4">
+      <div className="bg-white border-t border-gray-200 px-3 md:px-6 py-3 md:py-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-end space-x-3">
+          <div className="flex items-end gap-2 md:gap-3">
             {/* User Avatar */}
             {avatarUrl ? (
               <img
                 src={avatarUrl}
                 alt={fullName || 'Admin'}
-                className="h-10 w-10 rounded-full object-cover border-2 border-white shadow-sm"
+                className="h-8 w-8 md:h-10 md:w-10 rounded-full object-cover border-2 border-white shadow-sm flex-shrink-0"
               />
             ) : (
-              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold">
+              <div className="h-8 w-8 md:h-10 md:w-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold flex-shrink-0">
                 {(fullName || 'A').charAt(0).toUpperCase()}
               </div>
             )}
 
             {/* Input Field */}
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <Label htmlFor="message-input" className="sr-only">
                 Type a message
               </Label>
@@ -373,7 +373,7 @@ const MessagesManager: React.FC = () => {
                   }
                 }}
                 rows={1}
-                className="resize-none min-h-[44px] max-h-[120px]"
+                className="resize-none min-h-[44px] max-h-[120px] text-sm md:text-base"
                 disabled={sending}
               />
             </div>
@@ -382,7 +382,7 @@ const MessagesManager: React.FC = () => {
             <Button
               onClick={handleSendMessage}
               disabled={sending || !newMessage.trim()}
-              className="h-[44px] px-6"
+              className="min-h-[44px] px-4 md:px-6 flex-shrink-0"
             >
               {sending ? (
                 <Loader2 className="h-5 w-5 animate-spin" />
@@ -391,7 +391,7 @@ const MessagesManager: React.FC = () => {
               )}
             </Button>
           </div>
-          <p className="text-xs text-gray-500 mt-2">
+          <p className="text-xs text-gray-500 mt-2 hidden sm:block">
             Press Enter to send, Shift + Enter for new line
           </p>
         </div>
