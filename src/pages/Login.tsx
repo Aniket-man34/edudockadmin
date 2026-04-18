@@ -12,16 +12,12 @@ const Login: React.FC = () => {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          },
+          redirectTo: `${window.location.origin}/dashboard`,
         },
       })
 
       if (error) {
-        console.error('Error signing in with Google:', error)
+        console.error('Error during Google sign-in:', error)
         alert('Error signing in with Google. Please try again.')
       }
     } catch (error) {
