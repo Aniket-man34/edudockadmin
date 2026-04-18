@@ -31,14 +31,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const avatarUrl = user?.user_metadata?.avatar_url || user?.user_metadata?.picture || null
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
+    const fetchSession = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession()
+        setSession(session)
+        setUser(session?.user ?? null)
+      } catch (error) {
+        console.error('Error fetching session:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
 
-    // Listen for auth changes
+    fetchSession()
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
       setUser(session?.user ?? null)
@@ -62,23 +68,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    if (error) {
-      throw error
+    try {
+      await supabase.auth.signOut()
+      setUser(null)
+      setSession(null)
+    } catch (error) {
+      console.error('Error during sign-out:', error)
     }
   }
 
   return (
     <AuthContext.Provider value={{ user, session, fullName, avatarUrl, loading, signInWithGoogle, signOut }}>
-      {children}
+      {loading ? <div>Loading...</div> : children}
     </AuthContext.Provider>
   )
 }
 
-export const useAuth = () => {
-  const context = useContext(AuthContext)
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+export const useAuth = () => useContext(AuthContext)
