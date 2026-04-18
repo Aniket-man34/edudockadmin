@@ -1,4 +1,4 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import AdminLayout from './components/admin/AdminLayout'
 import Dashboard from './pages/Dashboard'
 import PdfsManager from './pages/PdfsManager'
@@ -36,6 +36,7 @@ function App() {
               <Route path="categories" element={<CategoriesManager />} />
               <Route path="messages" element={<MessagesManager />} />
             </Route>
+            <Route path="*" element={<Navigate to="/" />} />
           </Routes>
           <Toaster />
         </Router>
