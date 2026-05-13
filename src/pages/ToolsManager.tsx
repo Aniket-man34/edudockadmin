@@ -15,6 +15,7 @@ import {
   Upload,
   Link,
   Folder,
+  Crop,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -37,6 +38,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import ImageUploader from '@/components/shared/ImageUploader'
+import { ImageCropper } from '@/components/shared/ImageCropper'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
 import { deleteStorageFile } from '@/lib/storageUtils'
@@ -66,9 +68,28 @@ const ToolsManager: React.FC = () => {
   const [formFaviconUrl, setFormFaviconUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
 
+  // Image cropping state
+  const [croppingImage, setCroppingImage] = useState(false)
+  const [tempImage, setTempImage] = useState<string | null>(null)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
+  const [imageUploaderKey, setImageUploaderKey] = useState(0)
+
   const { toast } = useToast()
   const { fullName, avatarUrl } = useAuth()
   const { editTarget, closeEdit } = useGlobalSearch()
+
+  // Clean up object URLs on unmount
+  useEffect(() => {
+    return () => {
+      if (tempImage) {
+        URL.revokeObjectURL(tempImage)
+      }
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl)
+      }
+    }
+  }, [tempImage, croppedImageUrl])
 
   // Fetch tools from Supabase
   const fetchTools = async () => {
@@ -143,6 +164,12 @@ const ToolsManager: React.FC = () => {
     setFormImageSource('upload')
     setFormFaviconUrl('')
     setFormCategoryId('')
+    // Reset cropping state
+    setCroppingImage(false)
+    setTempImage(null)
+    setSelectedImageFile(null)
+    setCroppedImageUrl(null)
+    setImageUploaderKey(prev => prev + 1) // increment to force remount
   }
 
   // Open Add Dialog
@@ -165,6 +192,42 @@ const ToolsManager: React.FC = () => {
     setIsEditDialogOpen(true)
   }
 
+  // Handle crop completion
+  const handleCropComplete = (file: File) => {
+    setSelectedImageFile(file)
+    setFormImage(file)
+    // Generate a preview URL for the cropped image
+    const croppedUrl = URL.createObjectURL(file)
+    setCroppedImageUrl(croppedUrl)
+    // Clean up temp image URL
+    if (tempImage) {
+      URL.revokeObjectURL(tempImage)
+    }
+    setTempImage(null)
+    setCroppingImage(false)
+    // Increment key to force ImageUploader remount
+    setImageUploaderKey(prev => prev + 1)
+    toast({
+      title: 'Image Cropped',
+      description: 'Image has been cropped successfully.',
+      variant: 'default',
+    })
+  }
+
+  // Handle image change from ImageUploader
+  const handleImageChange = (file: File | null) => {
+    setFormImage(file)
+    // If a new image is selected (not null), reset cropped image URL
+    if (file) {
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl)
+        setCroppedImageUrl(null)
+      }
+      // Also reset selectedImageFile (cropped file) because we have a new original
+      setSelectedImageFile(null)
+    }
+  }
+
   // Handle Add Tool
   const handleAddTool = async () => {
     if (!formTitle.trim() || !formDescription.trim() || !formUrl.trim()) {
@@ -181,22 +244,26 @@ const ToolsManager: React.FC = () => {
       let imageUrl: string | null = null
 
       // Phase 3: Handle based on image source type
-      if (formImageSource === 'upload' && formImage) {
-        // Upload image (already compressed by ImageUploader)
-        const fileExt = formImage.name.split('.').pop()
-        const fileName = `${uuidv4()}.${fileExt}`
+      if (formImageSource === 'upload') {
+        // Use cropped image if available, otherwise original
+        const imageToUpload = selectedImageFile || formImage
+        if (imageToUpload) {
+          // Upload image (already compressed by ImageUploader)
+          const fileExt = imageToUpload.name.split('.').pop()
+          const fileName = `${uuidv4()}.${fileExt}`
 
-        const { error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKETS.TOOL_IMAGES)
-          .upload(fileName, formImage)
+          const { error: uploadError } = await supabase.storage
+            .from(STORAGE_BUCKETS.TOOL_IMAGES)
+            .upload(fileName, imageToUpload)
 
-        if (uploadError) throw uploadError
+          if (uploadError) throw uploadError
 
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKETS.TOOL_IMAGES)
-          .getPublicUrl(fileName)
+          const { data: urlData } = supabase.storage
+            .from(STORAGE_BUCKETS.TOOL_IMAGES)
+            .getPublicUrl(fileName)
 
-        imageUrl = urlData.publicUrl
+          imageUrl = urlData.publicUrl
+        }
       } else if (formImageSource === 'favicon' && formFaviconUrl.trim()) {
         // Use favicon URL directly as the image
         imageUrl = formFaviconUrl.trim()
@@ -256,26 +323,30 @@ const ToolsManager: React.FC = () => {
       let imageUrl = selectedTool.image_url
 
       // Phase 3: Handle based on image source type
-      if (formImageSource === 'upload' && formImage) {
-        // Delete old uploaded image from storage (only if it was an upload, not a favicon URL)
-        if (selectedTool.image_type !== 'favicon' && selectedTool.image_url) {
-          await deleteStorageFile(selectedTool.image_url)
+      if (formImageSource === 'upload') {
+        // Use cropped image if available, otherwise original
+        const imageToUpload = selectedImageFile || formImage
+        if (imageToUpload) {
+          // Delete old uploaded image from storage (only if it was an upload, not a favicon URL)
+          if (selectedTool.image_type !== 'favicon' && selectedTool.image_url) {
+            await deleteStorageFile(selectedTool.image_url)
+          }
+
+          const fileExt = imageToUpload.name.split('.').pop()
+          const fileName = `${uuidv4()}.${fileExt}`
+
+          const { error: uploadError } = await supabase.storage
+            .from(STORAGE_BUCKETS.TOOL_IMAGES)
+            .upload(fileName, imageToUpload)
+
+          if (uploadError) throw uploadError
+
+          const { data: urlData } = supabase.storage
+            .from(STORAGE_BUCKETS.TOOL_IMAGES)
+            .getPublicUrl(fileName)
+
+          imageUrl = urlData.publicUrl
         }
-
-        const fileExt = formImage.name.split('.').pop()
-        const fileName = `${uuidv4()}.${fileExt}`
-
-        const { error: uploadError } = await supabase.storage
-          .from(STORAGE_BUCKETS.TOOL_IMAGES)
-          .upload(fileName, formImage)
-
-        if (uploadError) throw uploadError
-
-        const { data: urlData } = supabase.storage
-          .from(STORAGE_BUCKETS.TOOL_IMAGES)
-          .getPublicUrl(fileName)
-
-        imageUrl = urlData.publicUrl
       } else if (formImageSource === 'favicon') {
         // Switching from upload to favicon — delete old uploaded image
         if (selectedTool.image_type !== 'favicon' && selectedTool.image_url) {
@@ -631,11 +702,41 @@ const ToolsManager: React.FC = () => {
             </div>
             {/* Phase 3: Conditional input based on image source */}
             {formImageSource === 'upload' ? (
-              <ImageUploader
-                onImageChange={setFormImage}
-                label="Tool Image (Optional)"
-                bucketName={STORAGE_BUCKETS.TOOL_IMAGES}
-              />
+              <div className="space-y-3">
+                <ImageUploader
+                  key={imageUploaderKey}
+                  onImageChange={handleImageChange}
+                  currentImageUrl={croppedImageUrl || undefined}
+                  label="Tool Image (Optional)"
+                  bucketName={STORAGE_BUCKETS.TOOL_IMAGES}
+                />
+                {(croppedImageUrl || formImage) && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (formImage) {
+                          const url = URL.createObjectURL(formImage)
+                          setTempImage(url)
+                          setCroppingImage(true)
+                        }
+                      }}
+                      disabled={!formImage}
+                      className="flex items-center gap-2"
+                    >
+                      <Crop className="h-4 w-4" />
+                      Crop Image
+                    </Button>
+                    {croppedImageUrl && (
+                      <div className="text-xs text-gray-500">
+                        Cropped preview is shown above
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="add-favicon-url">Favicon URL</Label>
@@ -737,12 +838,41 @@ const ToolsManager: React.FC = () => {
             </div>
             {/* Phase 3: Conditional input based on image source */}
             {formImageSource === 'upload' ? (
-              <ImageUploader
-                onImageChange={setFormImage}
-                currentImageUrl={selectedTool?.image_url}
-                label="Tool Image"
-                bucketName={STORAGE_BUCKETS.TOOL_IMAGES}
-              />
+              <div className="space-y-3">
+                <ImageUploader
+                  key={imageUploaderKey}
+                  onImageChange={handleImageChange}
+                  currentImageUrl={croppedImageUrl || selectedTool?.image_url}
+                  label="Tool Image"
+                  bucketName={STORAGE_BUCKETS.TOOL_IMAGES}
+                />
+                {(croppedImageUrl || formImage) && (
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        if (formImage) {
+                          const url = URL.createObjectURL(formImage)
+                          setTempImage(url)
+                          setCroppingImage(true)
+                        }
+                      }}
+                      disabled={!formImage}
+                      className="flex items-center gap-2"
+                    >
+                      <Crop className="h-4 w-4" />
+                      Crop Image
+                    </Button>
+                    {croppedImageUrl && (
+                      <div className="text-xs text-gray-500">
+                        Cropped preview is shown above
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             ) : (
               <div className="space-y-2">
                 <Label htmlFor="edit-favicon-url">Favicon URL</Label>
@@ -797,6 +927,14 @@ const ToolsManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Cropper Dialog */}
+      <ImageCropper
+        open={croppingImage}
+        onOpenChange={setCroppingImage}
+        onCropComplete={handleCropComplete}
+        initialImage={tempImage || undefined}
+      />
     </div>
   )
 }

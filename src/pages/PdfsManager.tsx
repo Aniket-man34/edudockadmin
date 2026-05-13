@@ -13,6 +13,7 @@ import {
   Upload,
   Link,
   Folder,
+  Crop,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -35,6 +36,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import ImageUploader from '@/components/shared/ImageUploader'
+import { ImageCropper } from '@/components/shared/ImageCropper'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
 import { deleteStorageFile } from '@/lib/storageUtils'
@@ -58,6 +60,12 @@ const PdfsManager: React.FC = () => {
   const [formTitle, setFormTitle] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formCoverImage, setFormCoverImage] = useState<File | null>(null)
+  // Image cropping state
+  const [croppingImage, setCroppingImage] = useState(false)
+  const [tempImage, setTempImage] = useState<string | null>(null)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
+  const [imageUploaderKey, setImageUploaderKey] = useState(0)
   const [formPdfFile, setFormPdfFile] = useState<File | null>(null)
   const [formPdfFileName, setFormPdfFileName] = useState<string>('')
   // Phase 3: PDF source toggle
@@ -144,6 +152,12 @@ const PdfsManager: React.FC = () => {
     setFormPdfSource('upload')
     setFormDriveLink('')
     setFormCategoryId('')
+    // Reset cropping state
+    setCroppingImage(false)
+    setTempImage(null)
+    setSelectedImageFile(null)
+    setCroppedImageUrl(null)
+    setImageUploaderKey(prev => prev + 1) // increment to force remount
   }
 
   // Open Add Dialog
@@ -181,6 +195,58 @@ const PdfsManager: React.FC = () => {
       }
       setFormPdfFile(file)
       setFormPdfFileName(file.name)
+    }
+  }
+
+  // Handle opening image cropper
+  const handleOpenCropper = () => {
+    if (!formCoverImage) {
+      toast({
+        title: 'No Image',
+        description: 'Please select an image first.',
+        variant: 'destructive',
+      })
+      return
+    }
+    // Create a preview URL for the selected image
+    const url = URL.createObjectURL(formCoverImage)
+    setTempImage(url)
+    setCroppingImage(true)
+  }
+
+  // Handle crop completion
+  const handleCropComplete = (file: File) => {
+    setSelectedImageFile(file)
+    setFormCoverImage(file)
+    // Generate a preview URL for the cropped image
+    const croppedUrl = URL.createObjectURL(file)
+    setCroppedImageUrl(croppedUrl)
+    // Clean up temp image URL
+    if (tempImage) {
+      URL.revokeObjectURL(tempImage)
+    }
+    setTempImage(null)
+    setCroppingImage(false)
+    // Increment key to force ImageUploader remount
+    setImageUploaderKey(prev => prev + 1)
+    toast({
+      title: 'Image Cropped',
+      description: 'Image has been cropped successfully.',
+      variant: 'default',
+    })
+  }
+
+  // Handle cover image change from ImageUploader
+  const handleCoverImageChange = (file: File | null) => {
+    setFormCoverImage(file)
+    // If a new image is selected (not null), reset cropped image URL
+    if (file) {
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl)
+        setCroppedImageUrl(null)
+      }
+      // Also reset selectedImageFile (cropped file) because we have a new original
+      setSelectedImageFile(null)
     }
   }
 
@@ -749,11 +815,27 @@ const PdfsManager: React.FC = () => {
                 ))}
               </select>
             </div>
-            <ImageUploader
-              onImageChange={setFormCoverImage}
-              label="Cover Image (Optional)"
-              bucketName={STORAGE_BUCKETS.PDF_COVERS}
-            />
+            <div className="space-y-3">
+              <ImageUploader
+                key={imageUploaderKey}
+                onImageChange={handleCoverImageChange}
+                currentImageUrl={croppedImageUrl || undefined}
+                label="Cover Image (Optional)"
+                bucketName={STORAGE_BUCKETS.PDF_COVERS}
+              />
+              {formCoverImage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenCropper}
+                  className="w-full"
+                >
+                  <Crop className="mr-2 h-4 w-4" />
+                  Crop Image
+                </Button>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -864,12 +946,27 @@ const PdfsManager: React.FC = () => {
                 ))}
               </select>
             </div>
-            <ImageUploader
-              onImageChange={setFormCoverImage}
-              currentImageUrl={selectedPdf?.cover_image_url}
-              label="Cover Image"
-              bucketName={STORAGE_BUCKETS.PDF_COVERS}
-            />
+            <div className="space-y-3">
+              <ImageUploader
+                key={imageUploaderKey}
+                onImageChange={handleCoverImageChange}
+                currentImageUrl={croppedImageUrl || selectedPdf?.cover_image_url}
+                label="Cover Image"
+                bucketName={STORAGE_BUCKETS.PDF_COVERS}
+              />
+              {formCoverImage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenCropper}
+                  className="w-full"
+                >
+                  <Crop className="mr-2 h-4 w-4" />
+                  Crop Image
+                </Button>
+              )}
+            </div>
           </div>
           <DialogFooter>
             <Button
@@ -892,6 +989,14 @@ const PdfsManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        open={croppingImage}
+        onOpenChange={setCroppingImage}
+        onCropComplete={handleCropComplete}
+        initialImage={tempImage || undefined}
+      />
     </div>
   )
 }

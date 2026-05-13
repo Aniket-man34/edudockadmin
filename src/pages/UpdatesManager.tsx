@@ -12,6 +12,7 @@ import {
   Loader2,
   ExternalLink,
   Folder,
+  Crop,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -34,6 +35,8 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog'
 import ImageUploader from '@/components/shared/ImageUploader'
+import { ImageCropper } from '@/components/shared/ImageCropper'
+import GoogleSearchPreview from '@/components/shared/GoogleSearchPreview'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
 import { deleteStorageFile } from '@/lib/storageUtils'
@@ -57,9 +60,19 @@ const UpdatesManager: React.FC = () => {
   const [formTitle, setFormTitle] = useState('')
   const [formContent, setFormContent] = useState('')
   const [formImage, setFormImage] = useState<File | null>(null)
+  // Image cropping state
+  const [croppingImage, setCroppingImage] = useState(false)
+  const [tempImage, setTempImage] = useState<string | null>(null)
+  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
+  const [imageUploaderKey, setImageUploaderKey] = useState(0)
   // Phase 3: External URL field
   const [formExternalUrl, setFormExternalUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
+  // SEO Meta Data fields
+  const [formSlug, setFormSlug] = useState('')
+  const [formMetaTitle, setFormMetaTitle] = useState('')
+  const [formMetaDescription, setFormMetaDescription] = useState('')
 
   const { toast } = useToast()
   const { fullName, avatarUrl } = useAuth()
@@ -136,6 +149,15 @@ const UpdatesManager: React.FC = () => {
     setFormImage(null)
     setFormExternalUrl('')
     setFormCategoryId('')
+    setFormSlug('')
+    setFormMetaTitle('')
+    setFormMetaDescription('')
+    // Reset cropping state
+    setCroppingImage(false)
+    setTempImage(null)
+    setSelectedImageFile(null)
+    setCroppedImageUrl(null)
+    setImageUploaderKey(prev => prev + 1) // increment to force remount
   }
 
   // Open Add Dialog
@@ -152,7 +174,62 @@ const UpdatesManager: React.FC = () => {
     setFormImage(null)
     setFormExternalUrl(update.external_url || '')
     setFormCategoryId(update.category_id || '')
+    setFormSlug(update.slug || '')
+    setFormMetaTitle(update.meta_title || '')
+    setFormMetaDescription(update.meta_description || '')
     setIsEditDialogOpen(true)
+  }
+
+  // Handle opening image cropper
+  const handleOpenCropper = () => {
+    if (!formImage) {
+      toast({
+        title: 'No Image',
+        description: 'Please select an image first.',
+        variant: 'destructive',
+      })
+      return
+    }
+    // Create a preview URL for the selected image
+    const url = URL.createObjectURL(formImage)
+    setTempImage(url)
+    setCroppingImage(true)
+  }
+
+  // Handle crop completion
+  const handleCropComplete = (file: File) => {
+    setSelectedImageFile(file)
+    setFormImage(file)
+    // Generate a preview URL for the cropped image
+    const croppedUrl = URL.createObjectURL(file)
+    setCroppedImageUrl(croppedUrl)
+    // Clean up temp image URL
+    if (tempImage) {
+      URL.revokeObjectURL(tempImage)
+    }
+    setTempImage(null)
+    setCroppingImage(false)
+    // Increment key to force ImageUploader remount
+    setImageUploaderKey(prev => prev + 1)
+    toast({
+      title: 'Image Cropped',
+      description: 'Image has been cropped successfully.',
+      variant: 'default',
+    })
+  }
+
+  // Handle image change from ImageUploader
+  const handleImageChange = (file: File | null) => {
+    setFormImage(file)
+    // If a new image is selected (not null), reset cropped image URL
+    if (file) {
+      if (croppedImageUrl) {
+        URL.revokeObjectURL(croppedImageUrl)
+        setCroppedImageUrl(null)
+      }
+      // Also reset selectedImageFile (cropped file) because we have a new original
+      setSelectedImageFile(null)
+    }
   }
 
   // Handle Add Update
@@ -170,14 +247,15 @@ const UpdatesManager: React.FC = () => {
     try {
       let imageUrl: string | null = null
 
-      // Upload image if present (already compressed by ImageUploader)
-      if (formImage) {
-        const fileExt = formImage.name.split('.').pop()
+      // Upload image if present (use cropped image if available, otherwise original)
+      const imageToUpload = selectedImageFile || formImage
+      if (imageToUpload) {
+        const fileExt = imageToUpload.name.split('.').pop()
         const fileName = `${uuidv4()}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKETS.UPDATE_IMAGES)
-          .upload(fileName, formImage)
+          .upload(fileName, imageToUpload)
 
         if (uploadError) throw uploadError
 
@@ -188,7 +266,7 @@ const UpdatesManager: React.FC = () => {
         imageUrl = urlData.publicUrl
       }
 
-      // Insert record (Phase 3: external_url, Phase 5: author info)
+      // Insert record (Phase 3: external_url, Phase 5: author info, SEO meta)
       const { error: insertError } = await supabase
         .from(TABLES.UPDATES)
         .insert({
@@ -199,6 +277,9 @@ const UpdatesManager: React.FC = () => {
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
+          slug: formSlug.trim() || null,
+          meta_title: formMetaTitle.trim() || null,
+          meta_description: formMetaDescription.trim() || null,
         })
 
       if (insertError) throw insertError
@@ -239,19 +320,20 @@ const UpdatesManager: React.FC = () => {
     try {
       let imageUrl = selectedUpdate.image_url
 
-      // Upload new image if changed
-      if (formImage) {
+      // Upload new image if changed (use cropped image if available, otherwise original)
+      const imageToUpload = selectedImageFile || formImage
+      if (imageToUpload) {
         // Delete old image from storage before uploading new one
         if (selectedUpdate.image_url) {
           await deleteStorageFile(selectedUpdate.image_url)
         }
 
-        const fileExt = formImage.name.split('.').pop()
+        const fileExt = imageToUpload.name.split('.').pop()
         const fileName = `${uuidv4()}.${fileExt}`
 
         const { error: uploadError } = await supabase.storage
           .from(STORAGE_BUCKETS.UPDATE_IMAGES)
-          .upload(fileName, formImage)
+          .upload(fileName, imageToUpload)
 
         if (uploadError) throw uploadError
 
@@ -262,7 +344,7 @@ const UpdatesManager: React.FC = () => {
         imageUrl = urlData.publicUrl
       }
 
-      // Update record (Phase 3: external_url, Phase 5: author info, category_id)
+      // Update record (Phase 3: external_url, Phase 5: author info, category_id, SEO meta)
       const { error: updateError } = await supabase
         .from(TABLES.UPDATES)
         .update({
@@ -273,6 +355,9 @@ const UpdatesManager: React.FC = () => {
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
+          slug: formSlug.trim() || null,
+          meta_title: formMetaTitle.trim() || null,
+          meta_description: formMetaDescription.trim() || null,
         })
         .eq('id', selectedUpdate.id)
 
@@ -564,11 +649,27 @@ const UpdatesManager: React.FC = () => {
                 rows={4}
               />
             </div>
-            <ImageUploader
-              onImageChange={setFormImage}
-              label="Update Image"
-              bucketName={STORAGE_BUCKETS.UPDATE_IMAGES}
-            />
+            <div className="space-y-3">
+              <ImageUploader
+                key={imageUploaderKey}
+                onImageChange={handleImageChange}
+                currentImageUrl={croppedImageUrl || undefined}
+                label="Update Image"
+                bucketName={STORAGE_BUCKETS.UPDATE_IMAGES}
+              />
+              {formImage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenCropper}
+                  className="w-full"
+                >
+                  <Crop className="mr-2 h-4 w-4" />
+                  Crop Image
+                </Button>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="add-category" className="flex items-center gap-2">
                 <Folder className="h-4 w-4 text-purple-500" />
@@ -587,6 +688,92 @@ const UpdatesManager: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* SEO Meta Data Section */}
+            <div className="border-t pt-6 mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-semibold text-gray-700">SEO Meta Data</span>
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                  Manual Override
+                </span>
+              </div>
+
+              {/* Live Google Search Preview */}
+              <GoogleSearchPreview
+                title={formMetaTitle || formTitle}
+                slug={formSlug}
+                description={formMetaDescription || formContent}
+              />
+
+              <div className="space-y-4 mt-4">
+                {/* Slug */}
+                <div className="space-y-1">
+                  <Label htmlFor="add-slug">URL Slug</Label>
+                  <Input
+                    id="add-slug"
+                    placeholder="my-update-slug"
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    URL-friendly identifier. Leave empty to auto-generate.
+                  </p>
+                </div>
+
+                {/* Meta Title */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="add-meta-title">Meta Title</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaTitle.length > 60 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaTitle.length}/60 chars
+                    </span>
+                  </div>
+                  <Input
+                    id="add-meta-title"
+                    placeholder="SEO title for search engines"
+                    value={formMetaTitle}
+                    onChange={(e) => setFormMetaTitle(e.target.value)}
+                    className={formMetaTitle.length > 60 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaTitle.length > 60 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 60-character limit. Title will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Meta Description */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="add-meta-description">Meta Description</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaDescription.length > 160 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <Textarea
+                    id="add-meta-description"
+                    placeholder="SEO description for search engines"
+                    value={formMetaDescription}
+                    onChange={(e) => setFormMetaDescription(e.target.value)}
+                    rows={3}
+                    className={formMetaDescription.length > 160 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaDescription.length > 160 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 160-character limit. Description will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -655,12 +842,27 @@ const UpdatesManager: React.FC = () => {
                 rows={4}
               />
             </div>
-            <ImageUploader
-              onImageChange={setFormImage}
-              currentImageUrl={selectedUpdate?.image_url}
-              label="Update Image"
-              bucketName={STORAGE_BUCKETS.UPDATE_IMAGES}
-            />
+            <div className="space-y-3">
+              <ImageUploader
+                key={imageUploaderKey}
+                onImageChange={handleImageChange}
+                currentImageUrl={croppedImageUrl || selectedUpdate?.image_url}
+                label="Update Image"
+                bucketName={STORAGE_BUCKETS.UPDATE_IMAGES}
+              />
+              {formImage && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOpenCropper}
+                  className="w-full"
+                >
+                  <Crop className="mr-2 h-4 w-4" />
+                  Crop Image
+                </Button>
+              )}
+            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-category" className="flex items-center gap-2">
                 <Folder className="h-4 w-4 text-purple-500" />
@@ -679,6 +881,92 @@ const UpdatesManager: React.FC = () => {
                   </option>
                 ))}
               </select>
+            </div>
+
+            {/* SEO Meta Data Section */}
+            <div className="border-t pt-6 mt-6">
+              <div className="flex items-center gap-2 mb-4">
+                <span className="text-sm font-semibold text-gray-700">SEO Meta Data</span>
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                  Manual Override
+                </span>
+              </div>
+
+              {/* Live Google Search Preview */}
+              <GoogleSearchPreview
+                title={formMetaTitle || formTitle}
+                slug={formSlug}
+                description={formMetaDescription || formContent}
+              />
+
+              <div className="space-y-4 mt-4">
+                {/* Slug */}
+                <div className="space-y-1">
+                  <Label htmlFor="edit-slug">URL Slug</Label>
+                  <Input
+                    id="edit-slug"
+                    placeholder="my-update-slug"
+                    value={formSlug}
+                    onChange={(e) => setFormSlug(e.target.value)}
+                  />
+                  <p className="text-xs text-gray-500">
+                    URL-friendly identifier. Leave empty to auto-generate.
+                  </p>
+                </div>
+
+                {/* Meta Title */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="edit-meta-title">Meta Title</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaTitle.length > 60 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaTitle.length}/60 chars
+                    </span>
+                  </div>
+                  <Input
+                    id="edit-meta-title"
+                    placeholder="SEO title for search engines"
+                    value={formMetaTitle}
+                    onChange={(e) => setFormMetaTitle(e.target.value)}
+                    className={formMetaTitle.length > 60 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaTitle.length > 60 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 60-character limit. Title will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Meta Description */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="edit-meta-description">Meta Description</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaDescription.length > 160 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <Textarea
+                    id="edit-meta-description"
+                    placeholder="SEO description for search engines"
+                    value={formMetaDescription}
+                    onChange={(e) => setFormMetaDescription(e.target.value)}
+                    rows={3}
+                    className={formMetaDescription.length > 160 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaDescription.length > 160 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 160-character limit. Description will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
           <DialogFooter>
@@ -702,6 +990,14 @@ const UpdatesManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Image Cropper Modal */}
+      <ImageCropper
+        open={croppingImage}
+        onOpenChange={setCroppingImage}
+        onCropComplete={handleCropComplete}
+        initialImage={tempImage || undefined}
+      />
     </div>
   )
 }
