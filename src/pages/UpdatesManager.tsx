@@ -73,6 +73,7 @@ const UpdatesManager: React.FC = () => {
   const [formSlug, setFormSlug] = useState('')
   const [formMetaTitle, setFormMetaTitle] = useState('')
   const [formMetaDescription, setFormMetaDescription] = useState('')
+  const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
 
   const { toast } = useToast()
   const { fullName, avatarUrl } = useAuth()
@@ -152,6 +153,7 @@ const UpdatesManager: React.FC = () => {
     setFormSlug('')
     setFormMetaTitle('')
     setFormMetaDescription('')
+    setFormSchemaMarkup('')
     // Reset cropping state
     setCroppingImage(false)
     setTempImage(null)
@@ -177,6 +179,7 @@ const UpdatesManager: React.FC = () => {
     setFormSlug(update.slug || '')
     setFormMetaTitle(update.meta_title || '')
     setFormMetaDescription(update.meta_description || '')
+    setFormSchemaMarkup(update.schema_markup || '')
     setIsEditDialogOpen(true)
   }
 
@@ -280,6 +283,7 @@ const UpdatesManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
+          schema_markup: formSchemaMarkup.trim() || null,
         })
 
       if (insertError) throw insertError
@@ -358,6 +362,7 @@ const UpdatesManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
+          schema_markup: formSchemaMarkup.trim() || null,
         })
         .eq('id', selectedUpdate.id)
 
@@ -773,6 +778,22 @@ const UpdatesManager: React.FC = () => {
                     </p>
                   )}
                 </div>
+
+                {/* Schema Markup (JSON-LD) */}
+                <div className="space-y-1">
+                  <Label htmlFor="add-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <Textarea
+                    id="add-schema-markup"
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [{\n    "@type": "Question",\n    "name": "Your question here?",\n    "acceptedAnswer": {\n      "@type": "Answer",\n      "text": "Your answer here."\n    }\n  }]\n}`}
+                    value={formSchemaMarkup}
+                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (FAQ, Article, BreadcrumbList, etc.).
+                  </p>
+                </div>
               </div>
             </div>
           </div>
@@ -965,6 +986,22 @@ const UpdatesManager: React.FC = () => {
                       Exceeds Google's recommended 160-character limit. Description will be truncated in search results.
                     </p>
                   )}
+                </div>
+
+                {/* Schema Markup (JSON-LD) */}
+                <div className="space-y-1">
+                  <Label htmlFor="edit-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <Textarea
+                    id="edit-schema-markup"
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [{\n    "@type": "Question",\n    "name": "Your question here?",\n    "acceptedAnswer": {\n      "@type": "Answer",\n      "text": "Your answer here."\n    }\n  }]\n}`}
+                    value={formSchemaMarkup}
+                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (FAQ, Article, BreadcrumbList, etc.).
+                  </p>
                 </div>
               </div>
             </div>
