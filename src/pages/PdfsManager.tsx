@@ -63,7 +63,7 @@ const PdfsManager: React.FC = () => {
   // Image cropping state
   const [croppingImage, setCroppingImage] = useState(false)
   const [tempImage, setTempImage] = useState<string | null>(null)
-  const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
+  const [, setSelectedImageFile] = useState<File | null>(null)
   const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
   const [imageUploaderKey, setImageUploaderKey] = useState(0)
   const [formPdfFile, setFormPdfFile] = useState<File | null>(null)
