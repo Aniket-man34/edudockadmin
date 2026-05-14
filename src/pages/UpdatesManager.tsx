@@ -246,6 +246,20 @@ const UpdatesManager: React.FC = () => {
       return
     }
 
+    // Validate JSON-LD schema markup if provided
+    if (formSchemaMarkup.trim()) {
+      try {
+        JSON.parse(formSchemaMarkup.trim())
+      } catch {
+        toast({
+          title: 'Invalid JSON',
+          description: 'Invalid JSON format in Schema Markup.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
     setIsSubmitting(true)
     try {
       let imageUrl: string | null = null
@@ -318,6 +332,20 @@ const UpdatesManager: React.FC = () => {
         variant: 'destructive',
       })
       return
+    }
+
+    // Validate JSON-LD schema markup if provided
+    if (formSchemaMarkup.trim()) {
+      try {
+        JSON.parse(formSchemaMarkup.trim())
+      } catch {
+        toast({
+          title: 'Invalid JSON',
+          description: 'Invalid JSON format in Schema Markup.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setIsSubmitting(true)
