@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import {
@@ -75,6 +75,19 @@ const UpdatesManager: React.FC = () => {
   const [formMetaDescription, setFormMetaDescription] = useState('')
   const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
 
+  // Track if admin has manually edited the slug manually (disables auto-generation)
+  const slugManuallyEdited = useRef(false)
+
+  // Generate a URL-friendly slug from a title string
+  const generateSlug = useCallback((title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')     // remove special characters
+      .replace(/\s+/g, '-')          // replace spaces with hyphens
+      .replace(/-+/g, '-')           // collapse multiple hyphens
+      .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
+  }, [])
+
   const { toast } = useToast()
   const { fullName, avatarUrl } = useAuth()
   const { editTarget, closeEdit } = useGlobalSearch()
@@ -145,6 +158,7 @@ const UpdatesManager: React.FC = () => {
 
   // Reset form
   const resetForm = () => {
+    slugManuallyEdited.current = false
     setFormTitle('')
     setFormContent('')
     setFormImage(null)
@@ -170,6 +184,7 @@ const UpdatesManager: React.FC = () => {
 
   // Open Edit Dialog
   const openEditDialog = (update: Update) => {
+    slugManuallyEdited.current = false
     setSelectedUpdate(update)
     setFormTitle(update.title)
     setFormContent(update.content)
@@ -669,7 +684,12 @@ const UpdatesManager: React.FC = () => {
                 id="add-title"
                 placeholder="Enter update title"
                 value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
+                onChange={(e) => {
+                  setFormTitle(e.target.value)
+                  if (!slugManuallyEdited.current) {
+                    setFormSlug(generateSlug(e.target.value))
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -747,7 +767,10 @@ const UpdatesManager: React.FC = () => {
                     id="add-slug"
                     placeholder="my-update-slug"
                     value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
+                    onChange={(e) => {
+                      slugManuallyEdited.current = true
+                      setFormSlug(e.target.value)
+                    }}
                   />
                   <p className="text-xs text-gray-500">
                     URL-friendly identifier. Leave empty to auto-generate.
@@ -878,7 +901,12 @@ const UpdatesManager: React.FC = () => {
                 id="edit-title"
                 placeholder="Enter update title"
                 value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
+                onChange={(e) => {
+                  setFormTitle(e.target.value)
+                  if (!slugManuallyEdited.current) {
+                    setFormSlug(generateSlug(e.target.value))
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -956,7 +984,10 @@ const UpdatesManager: React.FC = () => {
                     id="edit-slug"
                     placeholder="my-update-slug"
                     value={formSlug}
-                    onChange={(e) => setFormSlug(e.target.value)}
+                    onChange={(e) => {
+                      slugManuallyEdited.current = true
+                      setFormSlug(e.target.value)
+                    }}
                   />
                   <p className="text-xs text-gray-500">
                     URL-friendly identifier. Leave empty to auto-generate.
