@@ -69,7 +69,7 @@ const UpdatesManager: React.FC = () => {
   // Phase 3: External URL field
   const [formExternalUrl, setFormExternalUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
-  // SEO Meta Data fields
+  // SEO Meta Data fields 
   const [formSlug, setFormSlug] = useState('')
   const [formMetaTitle, setFormMetaTitle] = useState('')
   const [formMetaDescription, setFormMetaDescription] = useState('')
