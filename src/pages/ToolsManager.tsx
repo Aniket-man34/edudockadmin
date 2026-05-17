@@ -68,7 +68,7 @@ const ToolsManager: React.FC = () => {
   const [formFaviconUrl, setFormFaviconUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
 
-  // Image cropping state
+  // Image cropping stat
   const [croppingImage, setCroppingImage] = useState(false)
   const [tempImage, setTempImage] = useState<string | null>(null)
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
