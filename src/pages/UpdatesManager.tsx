@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
+import MDEditor from '@uiw/react-md-editor'
+import '@uiw/react-md-editor/markdown-editor.css'
 import {
   Plus,
   Edit,
@@ -655,7 +657,7 @@ const UpdatesManager: React.FC = () => {
 
       {/* Add Update Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Update</DialogTitle>
             <DialogDescription>
@@ -692,14 +694,14 @@ const UpdatesManager: React.FC = () => {
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="add-content">Content</Label>
-              <Textarea
-                id="add-content"
-                placeholder="Enter update content"
+            <div className="space-y-2" data-color-mode="light">
+              <Label htmlFor="add-content">Content (Markdown)</Label>
+              <MDEditor
                 value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-                rows={4}
+                onChange={(val) => setFormContent(val || '')}
+                height={450}
+                visibleDragbar={false}
+                preview="live"
               />
             </div>
             <div className="space-y-3">
@@ -744,22 +746,23 @@ const UpdatesManager: React.FC = () => {
             </div>
 
             {/* SEO Meta Data Section */}
-            <div className="border-t pt-6 mt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-semibold text-gray-700">SEO Meta Data</span>
+            <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 select-none flex items-center gap-2 list-none">
+                <span className="inline-block transition-transform duration-200 group-open:rotate-90">▶</span>
+                <span>SEO Meta Data</span>
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                   Manual Override
                 </span>
-              </div>
+              </summary>
 
-              {/* Live Google Search Preview */}
-              <GoogleSearchPreview
-                title={formMetaTitle || formTitle}
-                slug={formSlug}
-                description={formMetaDescription || formContent}
-              />
+              <div className="mt-4 space-y-4">
+                {/* Live Google Search Preview */}
+                <GoogleSearchPreview
+                  title={formMetaTitle || formTitle}
+                  slug={formSlug}
+                  description={formMetaDescription || formContent}
+                />
 
-              <div className="space-y-4 mt-4">
                 {/* Slug */}
                 <div className="space-y-1">
                   <Label htmlFor="add-slug">URL Slug</Label>
@@ -846,7 +849,7 @@ const UpdatesManager: React.FC = () => {
                   </p>
                 </div>
               </div>
-            </div>
+            </details>
           </div>
           <DialogFooter>
             <Button
@@ -872,7 +875,7 @@ const UpdatesManager: React.FC = () => {
 
       {/* Edit Update Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Update</DialogTitle>
             <DialogDescription>
@@ -909,14 +912,14 @@ const UpdatesManager: React.FC = () => {
                 }}
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-content">Content</Label>
-              <Textarea
-                id="edit-content"
-                placeholder="Enter update content"
+            <div className="space-y-2" data-color-mode="light">
+              <Label htmlFor="edit-content">Content (Markdown)</Label>
+              <MDEditor
                 value={formContent}
-                onChange={(e) => setFormContent(e.target.value)}
-                rows={4}
+                onChange={(val) => setFormContent(val || '')}
+                height={450}
+                visibleDragbar={false}
+                preview="live"
               />
             </div>
             <div className="space-y-3">
@@ -961,22 +964,23 @@ const UpdatesManager: React.FC = () => {
             </div>
 
             {/* SEO Meta Data Section */}
-            <div className="border-t pt-6 mt-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-sm font-semibold text-gray-700">SEO Meta Data</span>
+            <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 select-none flex items-center gap-2 list-none">
+                <span className="inline-block transition-transform duration-200 group-open:rotate-90">▶</span>
+                <span>SEO Meta Data</span>
                 <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
                   Manual Override
                 </span>
-              </div>
+              </summary>
 
-              {/* Live Google Search Preview */}
-              <GoogleSearchPreview
-                title={formMetaTitle || formTitle}
-                slug={formSlug}
-                description={formMetaDescription || formContent}
-              />
+              <div className="mt-4 space-y-4">
+                {/* Live Google Search Preview */}
+                <GoogleSearchPreview
+                  title={formMetaTitle || formTitle}
+                  slug={formSlug}
+                  description={formMetaDescription || formContent}
+                />
 
-              <div className="space-y-4 mt-4">
                 {/* Slug */}
                 <div className="space-y-1">
                   <Label htmlFor="edit-slug">URL Slug</Label>
@@ -1063,7 +1067,7 @@ const UpdatesManager: React.FC = () => {
                   </p>
                 </div>
               </div>
-            </div>
+            </details>
           </div>
           <DialogFooter>
             <Button
