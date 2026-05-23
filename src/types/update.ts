@@ -9,7 +9,7 @@ export interface Update {
   schema_markup: string | null // JSON-LD schema markup for Google Rich Snippets
   author_name: string | null // Phase 5
   author_avatar: string | null // Phase 5
-  category_id: string | null // Category reference
+  category_id: string | null // Category refere
   created_at: string
 }
 
