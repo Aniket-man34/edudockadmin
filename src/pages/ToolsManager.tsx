@@ -226,22 +226,6 @@ const ToolsManager: React.FC = () => {
     setIsEditDialogOpen(true)
   }
 
-  // Handle opening image cropper
-  const handleOpenCropper = () => {
-    if (!formImage) {
-      toast({
-        title: 'No Image',
-        description: 'Please select an image first.',
-        variant: 'destructive',
-      })
-      return
-    }
-    // Create a preview URL for the selected image
-    const url = URL.createObjectURL(formImage)
-    setTempImage(url)
-    setCroppingImage(true)
-  }
-
   // Handle crop completion
   const handleCropComplete = (file: File) => {
     setSelectedImageFile(file)

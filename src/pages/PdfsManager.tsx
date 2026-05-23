@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
-import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import {
   Plus,
@@ -641,14 +640,6 @@ const PdfsManager: React.FC = () => {
         description: 'Failed to delete PDF. Please try again.',
         variant: 'destructive',
       })
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM dd, yyyy')
-    } catch {
-      return dateString
     }
   }
 
