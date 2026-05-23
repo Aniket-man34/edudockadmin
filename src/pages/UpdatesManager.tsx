@@ -12,7 +12,6 @@ import {
   Filter,
   Download,
   Loader2,
-  ExternalLink,
   Folder,
   Crop,
 } from 'lucide-react'
@@ -68,14 +67,16 @@ const UpdatesManager: React.FC = () => {
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
   const [croppedImageUrl, setCroppedImageUrl] = useState<string | null>(null)
   const [imageUploaderKey, setImageUploaderKey] = useState(0)
-  // Phase 3: External URL field
-  const [formExternalUrl, setFormExternalUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
   // SEO Meta Data fields 
   const [formSlug, setFormSlug] = useState('')
   const [formMetaTitle, setFormMetaTitle] = useState('')
   const [formMetaDescription, setFormMetaDescription] = useState('')
   const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
+
+  // Inline Category Creation state
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
 
   // Track if admin has manually edited the slug manually (disables auto-generation)
   const slugManuallyEdited = useRef(false)
@@ -89,6 +90,54 @@ const UpdatesManager: React.FC = () => {
       .replace(/-+/g, '-')           // collapse multiple hyphens
       .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
   }, [])
+
+  // Handle inline category creation for UpdatesManager
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Category name is required.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsAddingCategory(true)
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.CATEGORIES)
+        .insert({
+          name: newCategoryName.trim(),
+          entity_type: 'update',
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast({
+        title: 'Category Added',
+        description: `"${newCategoryName.trim()}" category created successfully.`,
+        variant: 'default',
+      })
+
+      setNewCategoryName('')
+      await fetchCategories()
+      // Auto-select the newly created category
+      if (data) {
+        setFormCategoryId(data.id)
+      }
+    } catch (error) {
+      console.error('Error creating category:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to create category. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsAddingCategory(false)
+    }
+  }
 
   const { toast } = useToast()
   const { fullName, avatarUrl } = useAuth()
@@ -164,7 +213,6 @@ const UpdatesManager: React.FC = () => {
     setFormTitle('')
     setFormContent('')
     setFormImage(null)
-    setFormExternalUrl('')
     setFormCategoryId('')
     setFormSlug('')
     setFormMetaTitle('')
@@ -191,7 +239,6 @@ const UpdatesManager: React.FC = () => {
     setFormTitle(update.title)
     setFormContent(update.content)
     setFormImage(null)
-    setFormExternalUrl(update.external_url || '')
     setFormCategoryId(update.category_id || '')
     setFormSlug(update.slug || '')
     setFormMetaTitle(update.meta_title || '')
@@ -300,14 +347,13 @@ const UpdatesManager: React.FC = () => {
         imageUrl = urlData.publicUrl
       }
 
-      // Insert record (Phase 3: external_url, Phase 5: author info, SEO meta)
+      // Insert record (Phase 5: author info, category, SEO meta)
       const { error: insertError } = await supabase
         .from(TABLES.UPDATES)
         .insert({
           title: formTitle,
           content: formContent,
           image_url: imageUrl,
-          external_url: formExternalUrl.trim() || null,
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
@@ -400,7 +446,6 @@ const UpdatesManager: React.FC = () => {
           title: formTitle,
           content: formContent,
           image_url: imageUrl,
-          external_url: formExternalUrl.trim() || null,
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
@@ -487,6 +532,43 @@ const UpdatesManager: React.FC = () => {
     }
   }
 
+  // Inline Category Creator component
+  const InlineCategoryCreator = () => (
+    <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+      <Label className="text-xs font-semibold text-gray-600">Quick Add Category</Label>
+      <div className="flex gap-2">
+        <Input
+          placeholder="New category name..."
+          value={newCategoryName}
+          onChange={(e) => setNewCategoryName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleAddCategory()
+            }
+          }}
+          disabled={isAddingCategory}
+          className="min-h-[40px]"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddCategory}
+          disabled={isAddingCategory}
+          className="whitespace-nowrap min-h-[40px]"
+        >
+          {isAddingCategory ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <Plus className="h-4 w-4 mr-1" />
+          )}
+          Add Category
+        </Button>
+      </div>
+    </div>
+  )
+
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
@@ -546,22 +628,22 @@ const UpdatesManager: React.FC = () => {
               <TableHead className="w-16 md:w-20">Preview</TableHead>
               <TableHead>Title</TableHead>
               <TableHead className="hidden md:table-cell">Content</TableHead>
-              <TableHead className="hidden sm:table-cell">External URL</TableHead>
               <TableHead className="hidden lg:table-cell">Date</TableHead>
+              <TableHead className="hidden sm:table-cell">Category</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8">
+                <TableCell colSpan={7} className="text-center py-8">
                   <Loader2 className="h-6 w-6 animate-spin mx-auto text-gray-400" />
                   <p className="mt-2 text-gray-500">Loading updates...</p>
                 </TableCell>
               </TableRow>
             ) : filteredUpdates.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={6} className="text-center py-8 text-gray-500">
+                <TableCell colSpan={7} className="text-center py-8 text-gray-500">
                   No updates found. Create your first update!
                 </TableCell>
               </TableRow>
@@ -586,16 +668,10 @@ const UpdatesManager: React.FC = () => {
                   <TableCell className="font-medium max-w-[160px] sm:max-w-none truncate">{update.title}</TableCell>
                   <TableCell className="hidden md:table-cell max-w-xs truncate">{update.content}</TableCell>
                   <TableCell className="hidden sm:table-cell">
-                    {update.external_url ? (
-                      <a
-                        href={update.external_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
-                      >
-                        <ExternalLink className="h-3 w-3" />
-                        Visit
-                      </a>
+                    {update.category_id && categories.find(c => c.id === update.category_id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                        {categories.find(c => c.id === update.category_id)?.name}
+                      </span>
                     ) : (
                       <span className="text-xs text-gray-400">—</span>
                     )}
@@ -665,21 +741,6 @@ const UpdatesManager: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            {/* Phase 3: External URL field visually prioritized (at the top) */}
-            <div className="space-y-2">
-              <Label htmlFor="add-external-url" className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-blue-500" />
-                External URL
-              </Label>
-              <Input
-                id="add-external-url"
-                placeholder="https://example.com/article"
-                value={formExternalUrl}
-                onChange={(e) => setFormExternalUrl(e.target.value)}
-                type="url"
-              />
-              <p className="text-xs text-gray-500">Link to the original source or reference page</p>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="add-title">Title</Label>
               <Input
@@ -744,6 +805,9 @@ const UpdatesManager: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Inline Category Creator */}
+            <InlineCategoryCreator />
 
             {/* SEO Meta Data Section */}
             <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">
@@ -883,21 +947,6 @@ const UpdatesManager: React.FC = () => {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-6 py-4">
-            {/* Phase 3: External URL field visually prioritized (at the top) */}
-            <div className="space-y-2">
-              <Label htmlFor="edit-external-url" className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-blue-500" />
-                External URL
-              </Label>
-              <Input
-                id="edit-external-url"
-                placeholder="https://example.com/article"
-                value={formExternalUrl}
-                onChange={(e) => setFormExternalUrl(e.target.value)}
-                type="url"
-              />
-              <p className="text-xs text-gray-500">Link to the original source or reference page</p>
-            </div>
             <div className="space-y-2">
               <Label htmlFor="edit-title">Title</Label>
               <Input
@@ -962,6 +1011,9 @@ const UpdatesManager: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Inline Category Creator */}
+            <InlineCategoryCreator />
 
             {/* SEO Meta Data Section */}
             <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">

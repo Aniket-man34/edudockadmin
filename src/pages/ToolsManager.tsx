@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import {
@@ -39,6 +39,7 @@ import {
 } from '@/components/ui/dialog'
 import ImageUploader from '@/components/shared/ImageUploader'
 import { ImageCropper } from '@/components/shared/ImageCropper'
+import GoogleSearchPreview from '@/components/shared/GoogleSearchPreview'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
 import { deleteStorageFile } from '@/lib/storageUtils'
@@ -68,7 +69,30 @@ const ToolsManager: React.FC = () => {
   const [formFaviconUrl, setFormFaviconUrl] = useState('')
   const [formCategoryId, setFormCategoryId] = useState<string>('')
 
-  // Image cropping stat
+  // SEO Meta Data fields
+  const [formSlug, setFormSlug] = useState('')
+  const [formMetaTitle, setFormMetaTitle] = useState('')
+  const [formMetaDescription, setFormMetaDescription] = useState('')
+  const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
+
+  // Track if admin has manually edited the slug manually (disables auto-generation)
+  const slugManuallyEdited = useRef(false)
+
+  // Inline Category Creation state
+  const [isAddingCategory, setIsAddingCategory] = useState(false)
+  const [newCategoryName, setNewCategoryName] = useState('')
+
+  // Generate a URL-friendly slug from a title string
+  const generateSlug = useCallback((title: string) => {
+    return title
+      .toLowerCase()
+      .replace(/[^\w\s-]/g, '')     // remove special characters
+      .replace(/\s+/g, '-')          // replace spaces with hyphens
+      .replace(/-+/g, '-')           // collapse multiple hyphens
+      .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
+  }, [])
+
+  // Image cropping state
   const [croppingImage, setCroppingImage] = useState(false)
   const [tempImage, setTempImage] = useState<string | null>(null)
   const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null)
@@ -157,6 +181,7 @@ const ToolsManager: React.FC = () => {
 
   // Reset form
   const resetForm = () => {
+    slugManuallyEdited.current = false
     setFormTitle('')
     setFormDescription('')
     setFormUrl('')
@@ -164,6 +189,10 @@ const ToolsManager: React.FC = () => {
     setFormImageSource('upload')
     setFormFaviconUrl('')
     setFormCategoryId('')
+    setFormSlug('')
+    setFormMetaTitle('')
+    setFormMetaDescription('')
+    setFormSchemaMarkup('')
     // Reset cropping state
     setCroppingImage(false)
     setTempImage(null)
@@ -180,6 +209,7 @@ const ToolsManager: React.FC = () => {
 
   // Open Edit Dialog
   const openEditDialog = (tool: Tool) => {
+    slugManuallyEdited.current = false
     setSelectedTool(tool)
     setFormTitle(tool.title)
     setFormDescription(tool.description)
@@ -189,7 +219,27 @@ const ToolsManager: React.FC = () => {
     setFormImageSource(tool.image_type || 'upload')
     setFormFaviconUrl(tool.favicon_url || '')
     setFormCategoryId(tool.category_id || '')
+    setFormSlug(tool.slug || '')
+    setFormMetaTitle(tool.meta_title || '')
+    setFormMetaDescription(tool.meta_description || '')
+    setFormSchemaMarkup(tool.schema_markup || '')
     setIsEditDialogOpen(true)
+  }
+
+  // Handle opening image cropper
+  const handleOpenCropper = () => {
+    if (!formImage) {
+      toast({
+        title: 'No Image',
+        description: 'Please select an image first.',
+        variant: 'destructive',
+      })
+      return
+    }
+    // Create a preview URL for the selected image
+    const url = URL.createObjectURL(formImage)
+    setTempImage(url)
+    setCroppingImage(true)
   }
 
   // Handle crop completion
@@ -228,6 +278,54 @@ const ToolsManager: React.FC = () => {
     }
   }
 
+  // Handle inline category creation
+  const handleAddCategory = async () => {
+    if (!newCategoryName.trim()) {
+      toast({
+        title: 'Validation Error',
+        description: 'Category name is required.',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    setIsAddingCategory(true)
+    try {
+      const { data, error } = await supabase
+        .from(TABLES.CATEGORIES)
+        .insert({
+          name: newCategoryName.trim(),
+          entity_type: 'tool',
+        })
+        .select()
+        .single()
+
+      if (error) throw error
+
+      toast({
+        title: 'Category Added',
+        description: `"${newCategoryName.trim()}" category created successfully.`,
+        variant: 'default',
+      })
+
+      setNewCategoryName('')
+      await fetchCategories()
+      // Auto-select the newly created category
+      if (data) {
+        setFormCategoryId(data.id)
+      }
+    } catch (error) {
+      console.error('Error creating category:', error)
+      toast({
+        title: 'Error',
+        description: 'Failed to create category. Please try again.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsAddingCategory(false)
+    }
+  }
+
   // Handle Add Tool
   const handleAddTool = async () => {
     if (!formTitle.trim() || !formDescription.trim() || !formUrl.trim()) {
@@ -237,6 +335,20 @@ const ToolsManager: React.FC = () => {
         variant: 'destructive',
       })
       return
+    }
+
+    // Validate JSON-LD schema markup if provided
+    if (formSchemaMarkup.trim()) {
+      try {
+        JSON.parse(formSchemaMarkup.trim())
+      } catch {
+        toast({
+          title: 'Invalid JSON',
+          description: 'Invalid JSON format in Schema Markup.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -269,7 +381,7 @@ const ToolsManager: React.FC = () => {
         imageUrl = formFaviconUrl.trim()
       }
 
-      // Insert record (Phase 3: image_type/favicon_url, Phase 5: author info, category_id)
+      // Insert record
       const { error: insertError } = await supabase
         .from(TABLES.TOOLS)
         .insert({
@@ -282,6 +394,10 @@ const ToolsManager: React.FC = () => {
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
+          slug: formSlug.trim() || null,
+          meta_title: formMetaTitle.trim() || null,
+          meta_description: formMetaDescription.trim() || null,
+          schema_markup: formSchemaMarkup.trim() || null,
         })
 
       if (insertError) throw insertError
@@ -316,6 +432,20 @@ const ToolsManager: React.FC = () => {
         variant: 'destructive',
       })
       return
+    }
+
+    // Validate JSON-LD schema markup if provided
+    if (formSchemaMarkup.trim()) {
+      try {
+        JSON.parse(formSchemaMarkup.trim())
+      } catch {
+        toast({
+          title: 'Invalid JSON',
+          description: 'Invalid JSON format in Schema Markup.',
+          variant: 'destructive',
+        })
+        return
+      }
     }
 
     setIsSubmitting(true)
@@ -355,7 +485,7 @@ const ToolsManager: React.FC = () => {
         imageUrl = formFaviconUrl.trim() || null
       }
 
-      // Update record (Phase 3: image_type/favicon_url, Phase 5: author info, category_id)
+      // Update record
       const { error: updateError } = await supabase
         .from(TABLES.TOOLS)
         .update({
@@ -368,6 +498,10 @@ const ToolsManager: React.FC = () => {
           author_name: fullName,
           author_avatar: avatarUrl,
           category_id: formCategoryId || null,
+          slug: formSlug.trim() || null,
+          meta_title: formMetaTitle.trim() || null,
+          meta_description: formMetaDescription.trim() || null,
+          schema_markup: formSchemaMarkup.trim() || null,
         })
         .eq('id', selectedTool.id)
 
@@ -474,6 +608,43 @@ const ToolsManager: React.FC = () => {
         <Link className="h-4 w-4" />
         Enter Favicon URL
       </button>
+    </div>
+  )
+
+  // Reusable Inline Category Creator Component
+  const InlineCategoryCreator = () => (
+    <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
+      <Label className="text-xs font-semibold text-gray-600">Quick Add Category</Label>
+      <div className="flex gap-2">
+        <Input
+          placeholder="New category name..."
+          value={newCategoryName}
+          onChange={(e) => setNewCategoryName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault()
+              handleAddCategory()
+            }
+          }}
+          disabled={isAddingCategory}
+          className="min-h-[40px]"
+        />
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={handleAddCategory}
+          disabled={isAddingCategory}
+          className="whitespace-nowrap min-h-[40px]"
+        >
+          {isAddingCategory ? (
+            <Loader2 className="h-4 w-4 animate-spin mr-1" />
+          ) : (
+            <Plus className="h-4 w-4 mr-1" />
+          )}
+          Add Category
+        </Button>
+      </div>
     </div>
   )
 
@@ -658,7 +829,7 @@ const ToolsManager: React.FC = () => {
 
       {/* Add Tool Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Tool</DialogTitle>
             <DialogDescription>
@@ -672,7 +843,12 @@ const ToolsManager: React.FC = () => {
                 id="add-title"
                 placeholder="Enter tool title"
                 value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
+                onChange={(e) => {
+                  setFormTitle(e.target.value)
+                  if (!slugManuallyEdited.current) {
+                    setFormSlug(generateSlug(e.target.value))
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -769,6 +945,115 @@ const ToolsManager: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Inline Category Creator */}
+            <InlineCategoryCreator />
+
+            {/* SEO Meta Data Section */}
+            <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 select-none flex items-center gap-2 list-none">
+                <span className="inline-block transition-transform duration-200 group-open:rotate-90">▶</span>
+                <span>SEO Meta Data</span>
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                  Manual Override
+                </span>
+              </summary>
+
+              <div className="mt-4 space-y-4">
+                {/* Live Google Search Preview */}
+                <GoogleSearchPreview
+                  title={formMetaTitle || formTitle}
+                  slug={formSlug}
+                  description={formMetaDescription || formDescription}
+                />
+
+                {/* Slug */}
+                <div className="space-y-1">
+                  <Label htmlFor="add-slug">URL Slug</Label>
+                  <Input
+                    id="add-slug"
+                    placeholder="my-tool-slug"
+                    value={formSlug}
+                    onChange={(e) => {
+                      slugManuallyEdited.current = true
+                      setFormSlug(e.target.value)
+                    }}
+                  />
+                  <p className="text-xs text-gray-500">
+                    URL-friendly identifier. Leave empty to auto-generate.
+                  </p>
+                </div>
+
+                {/* Meta Title */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="add-meta-title">Meta Title</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaTitle.length > 60 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaTitle.length}/60 chars
+                    </span>
+                  </div>
+                  <Input
+                    id="add-meta-title"
+                    placeholder="SEO title for search engines"
+                    value={formMetaTitle}
+                    onChange={(e) => setFormMetaTitle(e.target.value)}
+                    className={formMetaTitle.length > 60 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaTitle.length > 60 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 60-character limit. Title will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Meta Description */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="add-meta-description">Meta Description</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaDescription.length > 160 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <Textarea
+                    id="add-meta-description"
+                    placeholder="SEO description for search engines"
+                    value={formMetaDescription}
+                    onChange={(e) => setFormMetaDescription(e.target.value)}
+                    rows={3}
+                    className={formMetaDescription.length > 160 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaDescription.length > 160 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 160-character limit. Description will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Schema Markup (JSON-LD) */}
+                <div className="space-y-1">
+                  <Label htmlFor="add-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <Textarea
+                    id="add-schema-markup"
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "SoftwareApplication",\n  "name": "Tool Name",\n  "applicationCategory": "EducationalApplication",\n  "operatingSystem": "Web"\n}`}
+                    value={formSchemaMarkup}
+                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.).
+                  </p>
+                </div>
+              </div>
+            </details>
           </div>
           <DialogFooter>
             <Button
@@ -794,7 +1079,7 @@ const ToolsManager: React.FC = () => {
 
       {/* Edit Tool Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
+        <DialogContent className="sm:max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Tool</DialogTitle>
             <DialogDescription>
@@ -808,7 +1093,12 @@ const ToolsManager: React.FC = () => {
                 id="edit-title"
                 placeholder="Enter tool title"
                 value={formTitle}
-                onChange={(e) => setFormTitle(e.target.value)}
+                onChange={(e) => {
+                  setFormTitle(e.target.value)
+                  if (!slugManuallyEdited.current) {
+                    setFormSlug(generateSlug(e.target.value))
+                  }
+                }}
               />
             </div>
             <div className="space-y-2">
@@ -905,6 +1195,115 @@ const ToolsManager: React.FC = () => {
                 ))}
               </select>
             </div>
+
+            {/* Inline Category Creator */}
+            <InlineCategoryCreator />
+
+            {/* SEO Meta Data Section */}
+            <details className="mt-6 border p-4 rounded-lg bg-gray-50 group">
+              <summary className="cursor-pointer text-sm font-semibold text-gray-700 select-none flex items-center gap-2 list-none">
+                <span className="inline-block transition-transform duration-200 group-open:rotate-90">▶</span>
+                <span>SEO Meta Data</span>
+                <span className="text-[10px] bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full font-medium">
+                  Manual Override
+                </span>
+              </summary>
+
+              <div className="mt-4 space-y-4">
+                {/* Live Google Search Preview */}
+                <GoogleSearchPreview
+                  title={formMetaTitle || formTitle}
+                  slug={formSlug}
+                  description={formMetaDescription || formDescription}
+                />
+
+                {/* Slug */}
+                <div className="space-y-1">
+                  <Label htmlFor="edit-slug">URL Slug</Label>
+                  <Input
+                    id="edit-slug"
+                    placeholder="my-tool-slug"
+                    value={formSlug}
+                    onChange={(e) => {
+                      slugManuallyEdited.current = true
+                      setFormSlug(e.target.value)
+                    }}
+                  />
+                  <p className="text-xs text-gray-500">
+                    URL-friendly identifier. Leave empty to auto-generate.
+                  </p>
+                </div>
+
+                {/* Meta Title */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="edit-meta-title">Meta Title</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaTitle.length > 60 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaTitle.length}/60 chars
+                    </span>
+                  </div>
+                  <Input
+                    id="edit-meta-title"
+                    placeholder="SEO title for search engines"
+                    value={formMetaTitle}
+                    onChange={(e) => setFormMetaTitle(e.target.value)}
+                    className={formMetaTitle.length > 60 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaTitle.length > 60 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 60-character limit. Title will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Meta Description */}
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="edit-meta-description">Meta Description</Label>
+                    <span
+                      className={`text-xs font-mono ${
+                        formMetaDescription.length > 160 ? 'text-red-500 font-semibold' : 'text-gray-400'
+                      }`}
+                    >
+                      {formMetaDescription.length}/160 chars
+                    </span>
+                  </div>
+                  <Textarea
+                    id="edit-meta-description"
+                    placeholder="SEO description for search engines"
+                    value={formMetaDescription}
+                    onChange={(e) => setFormMetaDescription(e.target.value)}
+                    rows={3}
+                    className={formMetaDescription.length > 160 ? 'border-red-300 focus:ring-red-500' : ''}
+                  />
+                  {formMetaDescription.length > 160 && (
+                    <p className="text-xs text-red-500">
+                      Exceeds Google's recommended 160-character limit. Description will be truncated in search results.
+                    </p>
+                  )}
+                </div>
+
+                {/* Schema Markup (JSON-LD) */}
+                <div className="space-y-1">
+                  <Label htmlFor="edit-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <Textarea
+                    id="edit-schema-markup"
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "SoftwareApplication",\n  "name": "Tool Name",\n  "applicationCategory": "EducationalApplication",\n  "operatingSystem": "Web"\n}`}
+                    value={formSchemaMarkup}
+                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    rows={8}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.).
+                  </p>
+                </div>
+              </div>
+            </details>
           </div>
           <DialogFooter>
             <Button
