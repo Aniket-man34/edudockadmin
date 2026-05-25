@@ -8,14 +8,14 @@ export interface CompressionOptions {
 }
 
 export const DEFAULT_COMPRESSION_OPTIONS: CompressionOptions = {
-  maxSizeMB: 0.05, // 50KB
+  maxSizeMB: 0.15, // 150KB
   maxWidthOrHeight: 1920,
   useWebWorker: true,
   fileType: 'image/webp',
 }
 
 /**
- * Compress an image file to under 50KB (WebP format preferred)
+ * Compress an image file to under 150KB (WebP format preferred)
  * @param file The original image file
  * @param options Compression options
  * @returns Compressed File object
@@ -33,7 +33,7 @@ export async function compressImage(
     })
 
     // Check if compression was successful
-    if (compressedFile.size > (options.maxSizeMB || 0.05) * 1024 * 1024) {
+    if (compressedFile.size > (options.maxSizeMB || 0.15) * 1024 * 1024) {
       console.warn(`Compressed image size (${compressedFile.size} bytes) exceeds target size`)
     }
 
@@ -73,7 +73,7 @@ export function isImageFile(file: File): boolean {
 /**
  * Get file size in human readable format
  * @param bytes File size in bytes
- * @returns Formatted string (e.g., "50 KB")
+ * @returns Formatted string (e.g., "150 KB")
  */
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'

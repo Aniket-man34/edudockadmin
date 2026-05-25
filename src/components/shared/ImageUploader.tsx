@@ -224,7 +224,7 @@ const ImageUploader: React.FC<ImageUploaderProps> = ({
             ) : (
               <>
                 <Minimize2 className="mr-2 h-4 w-4" />
-                Compress Image (50KB)
+                Compress Image (150KB)
               </>
             )}
           </Button>

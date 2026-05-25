@@ -326,7 +326,7 @@ export function ImageCropper({
                               This is a preview of how your cropped image will look.
                             </p>
                             <p className="text-xs text-green-600 font-medium mt-2">
-                              ✓ This cropped image will be automatically compressed to under 50KB
+                              ✓ This cropped image will be automatically compressed to under 150KB
                             </p>
                           </div>
                         </div>
