@@ -37,6 +37,7 @@ import {
 import ImageUploader from '@/components/shared/ImageUploader'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import GoogleSearchPreview from '@/components/shared/GoogleSearchPreview'
+import InlineCategoryCreator from '@/components/shared/InlineCategoryCreator'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
 import { deleteStorageFile } from '@/lib/storageUtils'
@@ -673,43 +674,6 @@ const PdfsManager: React.FC = () => {
     </div>
   )
 
-  // Inline Category Creator component
-  const InlineCategoryCreator = () => (
-    <div className="border rounded-lg p-3 bg-gray-50 space-y-2">
-      <Label className="text-xs font-semibold text-gray-600">Quick Add Category</Label>
-      <div className="flex gap-2">
-        <Input
-          placeholder="New category name..."
-          value={newCategoryName}
-          onChange={(e) => setNewCategoryName(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleAddCategory()
-            }
-          }}
-          disabled={isAddingCategory}
-          className="min-h-[40px]"
-        />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={handleAddCategory}
-          disabled={isAddingCategory}
-          className="whitespace-nowrap min-h-[40px]"
-        >
-          {isAddingCategory ? (
-            <Loader2 className="h-4 w-4 animate-spin mr-1" />
-          ) : (
-            <Plus className="h-4 w-4 mr-1" />
-          )}
-          Add Category
-        </Button>
-      </div>
-    </div>
-  )
-
   return (
     <div className="p-4 md:p-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 md:mb-8 gap-3">
@@ -953,9 +917,14 @@ const PdfsManager: React.FC = () => {
                 ))}
               </select>
             </div>
+{/* Inline Category Creator */}
+<InlineCategoryCreator
+  newCategoryName={newCategoryName}
+  onNewCategoryNameChange={setNewCategoryName}
+  onAddCategory={handleAddCategory}
+  isAddingCategory={isAddingCategory}
+/>
 
-            {/* Inline Category Creator */}
-            <InlineCategoryCreator />
 
             <div className="space-y-3">
               <ImageUploader
@@ -1204,7 +1173,12 @@ const PdfsManager: React.FC = () => {
             </div>
 
             {/* Inline Category Creator */}
-            <InlineCategoryCreator />
+            <InlineCategoryCreator
+              newCategoryName={newCategoryName}
+              onNewCategoryNameChange={setNewCategoryName}
+              onAddCategory={handleAddCategory}
+              isAddingCategory={isAddingCategory}
+            />
 
             <div className="space-y-3">
               <ImageUploader
