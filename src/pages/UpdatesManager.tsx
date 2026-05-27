@@ -3,6 +3,7 @@ import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import MDEditor from '@uiw/react-md-editor'
 import '@uiw/react-md-editor/markdown-editor.css'
+import rehypeRaw from 'rehype-raw'
 import {
   Plus,
   Edit,
@@ -728,6 +729,9 @@ const UpdatesManager: React.FC = () => {
                 height={450}
                 visibleDragbar={false}
                 preview="live"
+                previewOptions={{
+                  rehypePlugins: [[rehypeRaw, { passThrough: ['mdxJsxTextElement', 'mdxJsxFlowElement'] }]],
+                }}
               />
             </div>
             <div className="space-y-3">
@@ -939,6 +943,9 @@ const UpdatesManager: React.FC = () => {
                 height={450}
                 visibleDragbar={false}
                 preview="live"
+                previewOptions={{
+                  rehypePlugins: [[rehypeRaw, { passThrough: ['mdxJsxTextElement', 'mdxJsxFlowElement'] }]],
+                }}
               />
             </div>
             <div className="space-y-3">
