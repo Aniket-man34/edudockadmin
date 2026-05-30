@@ -36,8 +36,8 @@ const AdminLayout: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="flex">
+    <div className="h-screen overflow-hidden bg-gray-50">
+      <div className="flex h-full">
         {/* Sidebar (off-canvas drawer on mobile, static on desktop) */}
         <Sidebar
           isOpen={isSidebarOpen}
@@ -53,7 +53,7 @@ const AdminLayout: React.FC = () => {
             onToggleSidebarCollapse={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
             isSidebarCollapsed={isSidebarCollapsed}
           />
-          <main className="p-3 md:p-6">
+          <main className="p-3 md:p-6 overflow-y-auto" style={{ height: 'calc(100vh - 4rem)' }}>
             <div className="bg-white rounded-lg border border-gray-200 shadow-sm min-h-[calc(100vh-8rem)]">
               <Outlet />
             </div>

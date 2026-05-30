@@ -6,6 +6,7 @@ import UpdatesManager from './pages/UpdatesManager'
 import ToolsManager from './pages/ToolsManager'
 import CategoriesManager from './pages/CategoriesManager'
 import MessagesManager from './pages/MessagesManager'
+import SeoSettings from './pages/SeoSettings'
 import Login from './pages/Login'
 import { Toaster } from './components/ui/toaster'
 import { AuthProvider } from './contexts/AuthContext'
@@ -35,6 +36,7 @@ function App() {
               <Route path="tools" element={<ToolsManager />} />
               <Route path="categories" element={<CategoriesManager />} />
               <Route path="messages" element={<MessagesManager />} />
+              <Route path="seo" element={<SeoSettings />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

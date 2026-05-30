@@ -12,7 +12,7 @@ export interface Tool {
   slug: string | null // URL-friendly slug
   meta_title: string | null // SEO meta title (max ~60 chars)
   meta_description: string | null // SEO meta description (max ~160 chars)
-  schema_markup: string | null // JSON-LD schema markup for Google Rich Snippets
+  schema_markup: Record<string, unknown> | null // JSONB - JSON-LD schema markup for Google Rich Snippets
   created_at: string
 }
 

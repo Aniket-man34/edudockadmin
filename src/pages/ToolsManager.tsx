@@ -40,6 +40,7 @@ import {
 import ImageUploader from '@/components/shared/ImageUploader'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import GoogleSearchPreview from '@/components/shared/GoogleSearchPreview'
+import PublishingChecklistModal from '@/components/shared/PublishingChecklistModal'
 import InlineCategoryCreator from '@/components/shared/InlineCategoryCreator'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
@@ -76,12 +77,52 @@ const ToolsManager: React.FC = () => {
   const [formMetaDescription, setFormMetaDescription] = useState('')
   const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
 
+  // Slug validation error state
+  const [slugError, setSlugError] = useState<string>('')
+  // Schema markup JSON validation error state
+  const [schemaMarkupError, setSchemaMarkupError] = useState<string>('')
+
+  // Publishing checklist modal state ('add' | 'edit' | null)
+  const [checklistMode, setChecklistMode] = useState<'add' | 'edit' | null>(null)
+
   // Track if admin has manually edited the slug manually (disables auto-generation)
   const slugManuallyEdited = useRef(false)
 
   // Inline Category Creation state
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+
+  // Mouse drag-to-scroll implementation
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    setIsDragging(true)
+    setStartX(e.pageX - container.offsetLeft)
+    setScrollLeft(container.scrollLeft)
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    e.preventDefault()
+    const container = scrollContainerRef.current
+    if (!container) return
+    const x = e.pageX - container.offsetLeft
+    const walk = (x - startX) * 1.5 // Scroll speed multiplier
+    container.scrollLeft = scrollLeft - walk
+  }
 
   // Generate a URL-friendly slug from a title string
   const generateSlug = useCallback((title: string) => {
@@ -92,6 +133,54 @@ const ToolsManager: React.FC = () => {
       .replace(/-+/g, '-')           // collapse multiple hyphens
       .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
   }, [])
+
+  // Validate slug: regex format + uniqueness check against DB
+  const validateSlug = useCallback(async (slug: string, excludeId?: string) => {
+    const trimmed = slug.trim()
+    if (!trimmed) {
+      setSlugError('')
+      return true
+    }
+    // Regex: only lowercase letters, digits, hyphens
+    if (!/^[a-z0-9-]+$/.test(trimmed)) {
+      setSlugError('Slug must only contain lowercase letters, digits, and hyphens (a-z, 0-9, -).')
+      return false
+    }
+    // Uniqueness check against DB
+    try {
+      const query = supabase
+        .from(TABLES.TOOLS)
+        .select('id')
+        .eq('slug', trimmed)
+      const { data } = excludeId
+        ? await query.neq('id', excludeId)
+        : await query
+      if (data && data.length > 0) {
+        setSlugError('This slug is already in use by another tool.')
+        return false
+      }
+    } catch {
+      // If uniqueness check fails, allow submission (DB constraint will catch it)
+      console.warn('Slug uniqueness check failed, proceeding anyway')
+    }
+    setSlugError('')
+    return true
+  }, [])
+
+  // Validate schema markup JSON on blur
+  const validateSchemaMarkup = useCallback(() => {
+    const trimmed = formSchemaMarkup.trim()
+    if (!trimmed) {
+      setSchemaMarkupError('')
+      return
+    }
+    try {
+      JSON.parse(trimmed)
+      setSchemaMarkupError('')
+    } catch (e) {
+      setSchemaMarkupError(`Invalid JSON: ${(e as Error).message}`)
+    }
+  }, [formSchemaMarkup])
 
   // Image cropping state
   const [croppingImage, setCroppingImage] = useState(false)
@@ -194,6 +283,8 @@ const ToolsManager: React.FC = () => {
     setFormMetaTitle('')
     setFormMetaDescription('')
     setFormSchemaMarkup('')
+    setSlugError('')
+    setSchemaMarkupError('')
     // Reset cropping state
     setCroppingImage(false)
     setTempImage(null)
@@ -223,7 +314,7 @@ const ToolsManager: React.FC = () => {
     setFormSlug(tool.slug || '')
     setFormMetaTitle(tool.meta_title || '')
     setFormMetaDescription(tool.meta_description || '')
-    setFormSchemaMarkup(tool.schema_markup || '')
+    setFormSchemaMarkup(tool.schema_markup ? JSON.stringify(tool.schema_markup, null, 2) : '')
     setIsEditDialogOpen(true)
   }
 
@@ -313,6 +404,10 @@ const ToolsManager: React.FC = () => {
 
   // Handle Add Tool
   const handleAddTool = async () => {
+    // Validate slug format and uniqueness before submission
+    if (formSlug.trim() && !await validateSlug(formSlug)) {
+      return
+    }
     if (!formTitle.trim() || !formDescription.trim() || !formUrl.trim()) {
       toast({
         title: 'Validation Error',
@@ -382,7 +477,7 @@ const ToolsManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
-          schema_markup: formSchemaMarkup.trim() || null,
+          schema_markup: formSchemaMarkup.trim() ? JSON.parse(formSchemaMarkup.trim()) : null,
         })
 
       if (insertError) throw insertError
@@ -410,6 +505,10 @@ const ToolsManager: React.FC = () => {
 
   // Handle Edit Tool
   const handleEditTool = async () => {
+    // Validate slug format and uniqueness before submission (exclude current record)
+    if (formSlug.trim() && !await validateSlug(formSlug, selectedTool?.id)) {
+      return
+    }
     if (!selectedTool || !formTitle.trim() || !formDescription.trim() || !formUrl.trim()) {
       toast({
         title: 'Validation Error',
@@ -486,7 +585,7 @@ const ToolsManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
-          schema_markup: formSchemaMarkup.trim() || null,
+          schema_markup: formSchemaMarkup.trim() ? JSON.parse(formSchemaMarkup.trim()) : null,
         })
         .eq('id', selectedTool.id)
 
@@ -648,16 +747,25 @@ const ToolsManager: React.FC = () => {
       </div>
 
       {/* Tools Table */}
-      <div className="border rounded-lg overflow-x-auto">
+      <div
+        ref={scrollContainerRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className={`border rounded-lg overflow-x-auto select-none ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-16 md:w-20">Preview</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead className="hidden md:table-cell">Description</TableHead>
+              <TableHead className="hidden sm:table-cell">Category</TableHead>
+              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="hidden sm:table-cell">URL</TableHead>
               <TableHead className="hidden lg:table-cell">Image Source</TableHead>
-              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
@@ -693,20 +801,29 @@ const ToolsManager: React.FC = () => {
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium">{tool.title}</TableCell>
-                  <TableCell className="max-w-xs truncate">{tool.description}</TableCell>
-                  <TableCell>
+                  <TableCell className="font-medium max-w-xs truncate block">{tool.title}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
+                    {tool.category_id && categories.find(c => c.id === tool.category_id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                        {categories.find(c => c.id === tool.category_id)?.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">{formatDate(tool.created_at)}</TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <a
                       href={tool.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm"
+                      className="text-blue-600 hover:text-blue-800 flex items-center gap-1 text-sm font-medium"
                     >
                       <ExternalLink className="h-3 w-3" />
                       Visit
                     </a>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden lg:table-cell">
                     <span className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full ${
                       tool.image_type === 'favicon'
                         ? 'bg-orange-100 text-orange-700'
@@ -719,10 +836,9 @@ const ToolsManager: React.FC = () => {
                       )}
                     </span>
                   </TableCell>
-                  <TableCell>{formatDate(tool.created_at)}</TableCell>
                   <TableCell className="text-right">
-                    <div className="flex items-center justify-end space-x-2">
-                      <Button variant="ghost" size="icon" asChild>
+                    <div className="flex items-center justify-end gap-1 md:gap-2">
+                      <Button variant="ghost" size="icon" asChild className="min-h-[44px] min-w-[44px]">
                         <a href={tool.url} target="_blank" rel="noopener noreferrer">
                           <Eye className="h-4 w-4" />
                         </a>
@@ -731,6 +847,7 @@ const ToolsManager: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => openEditDialog(tool)}
+                        className="min-h-[44px] min-w-[44px]"
                       >
                         <Edit className="h-4 w-4" />
                       </Button>
@@ -738,7 +855,7 @@ const ToolsManager: React.FC = () => {
                         variant="ghost"
                         size="icon"
                         onClick={() => handleDelete(tool.id)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="min-h-[44px] min-w-[44px] text-red-600 hover:text-red-700 hover:bg-red-50"
                       >
                         <Trash2 className="h-4 w-4" />
                       </Button>
@@ -918,6 +1035,7 @@ const ToolsManager: React.FC = () => {
                   title={formMetaTitle || formTitle}
                   slug={formSlug}
                   description={formMetaDescription || formDescription}
+                  section="tool"
                 />
 
                 {/* Slug */}
@@ -930,10 +1048,20 @@ const ToolsManager: React.FC = () => {
                     onChange={(e) => {
                       slugManuallyEdited.current = true
                       setFormSlug(e.target.value)
+                      // Clear error while typing
+                      if (slugError) setSlugError('')
                     }}
+                    onBlur={() => validateSlug(formSlug)}
+                    className={slugError ? 'border-red-400 focus:border-red-500' : ''}
                   />
+                  {slugError && (
+                    <p className="text-xs text-red-500 font-medium">{slugError}</p>
+                  )}
+                  {!slugError && formSlug && /^[a-z0-9-]+$/.test(formSlug.trim()) && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid slug format</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    URL-friendly identifier. Leave empty to auto-generate.
+                    URL-friendly identifier. Only lowercase letters, digits, and hyphens. Leave empty to auto-generate.
                   </p>
                 </div>
 
@@ -993,16 +1121,31 @@ const ToolsManager: React.FC = () => {
                 {/* Schema Markup (JSON-LD) */}
                 <div className="space-y-1">
                   <Label htmlFor="add-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <div className="flex gap-2 flex-wrap mb-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", "name": formTitle, "applicationCategory": "EducationalApplication", "operatingSystem": "Web", "description": formDescription, "url": formUrl }, null, 2)); setSchemaMarkupError(''); }}>
+                      SoftwareApp
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "WebApplication", "name": formTitle, "url": formUrl, "description": formDescription, "applicationCategory": "EducationalApplication", "browserRequirements": "Requires JavaScript" }, null, 2)); setSchemaMarkupError(''); }}>
+                      WebApp
+                    </Button>
+                  </div>
                   <Textarea
                     id="add-schema-markup"
                     placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "SoftwareApplication",\n  "name": "Tool Name",\n  "applicationCategory": "EducationalApplication",\n  "operatingSystem": "Web"\n}`}
                     value={formSchemaMarkup}
-                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    onChange={(e) => { setFormSchemaMarkup(e.target.value); if (schemaMarkupError) setSchemaMarkupError(''); }}
+                    onBlur={validateSchemaMarkup}
                     rows={8}
-                    className="font-mono text-sm"
+                    className={`font-mono text-sm ${schemaMarkupError ? 'border-red-400 focus:border-red-500' : ''}`}
                   />
+                  {schemaMarkupError && (
+                    <p className="text-xs text-red-500 font-medium">{schemaMarkupError}</p>
+                  )}
+                  {!schemaMarkupError && formSchemaMarkup.trim() && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid JSON</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.).
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.). Use the templates above to get started.
                   </p>
                 </div>
               </div>
@@ -1016,7 +1159,7 @@ const ToolsManager: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleAddTool} disabled={isSubmitting}>
+            <Button onClick={() => { setChecklistMode('add') }} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1173,6 +1316,7 @@ const ToolsManager: React.FC = () => {
                   title={formMetaTitle || formTitle}
                   slug={formSlug}
                   description={formMetaDescription || formDescription}
+                  section="tool"
                 />
 
                 {/* Slug */}
@@ -1185,10 +1329,19 @@ const ToolsManager: React.FC = () => {
                     onChange={(e) => {
                       slugManuallyEdited.current = true
                       setFormSlug(e.target.value)
+                      if (slugError) setSlugError('')
                     }}
+                    onBlur={() => validateSlug(formSlug, selectedTool?.id)}
+                    className={slugError ? 'border-red-400 focus:border-red-500' : ''}
                   />
+                  {slugError && (
+                    <p className="text-xs text-red-500 font-medium">{slugError}</p>
+                  )}
+                  {!slugError && formSlug && /^[a-z0-9-]+$/.test(formSlug.trim()) && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid slug format</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    URL-friendly identifier. Leave empty to auto-generate.
+                    URL-friendly identifier. Only lowercase letters, digits, and hyphens. Leave empty to auto-generate.
                   </p>
                 </div>
 
@@ -1248,16 +1401,31 @@ const ToolsManager: React.FC = () => {
                 {/* Schema Markup (JSON-LD) */}
                 <div className="space-y-1">
                   <Label htmlFor="edit-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <div className="flex gap-2 flex-wrap mb-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "SoftwareApplication", "name": formTitle, "applicationCategory": "EducationalApplication", "operatingSystem": "Web", "description": formDescription, "url": formUrl }, null, 2)); setSchemaMarkupError(''); }}>
+                      SoftwareApp
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "WebApplication", "name": formTitle, "url": formUrl, "description": formDescription, "applicationCategory": "EducationalApplication", "browserRequirements": "Requires JavaScript" }, null, 2)); setSchemaMarkupError(''); }}>
+                      WebApp
+                    </Button>
+                  </div>
                   <Textarea
                     id="edit-schema-markup"
                     placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "SoftwareApplication",\n  "name": "Tool Name",\n  "applicationCategory": "EducationalApplication",\n  "operatingSystem": "Web"\n}`}
                     value={formSchemaMarkup}
-                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    onChange={(e) => { setFormSchemaMarkup(e.target.value); if (schemaMarkupError) setSchemaMarkupError(''); }}
+                    onBlur={validateSchemaMarkup}
                     rows={8}
-                    className="font-mono text-sm"
+                    className={`font-mono text-sm ${schemaMarkupError ? 'border-red-400 focus:border-red-500' : ''}`}
                   />
+                  {schemaMarkupError && (
+                    <p className="text-xs text-red-500 font-medium">{schemaMarkupError}</p>
+                  )}
+                  {!schemaMarkupError && formSchemaMarkup.trim() && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid JSON</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.).
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (SoftwareApplication, WebApplication, etc.). Use the templates above to get started.
                   </p>
                 </div>
               </div>
@@ -1271,7 +1439,7 @@ const ToolsManager: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleEditTool} disabled={isSubmitting}>
+            <Button onClick={() => { setChecklistMode('edit') }} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1284,6 +1452,28 @@ const ToolsManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Publishing Checklist Modal */}
+      <PublishingChecklistModal
+        open={checklistMode !== null}
+        onOpenChange={(open) => { if (!open) setChecklistMode(null) }}
+        section="tools"
+        title={formTitle}
+        slug={formSlug}
+        metaTitle={formMetaTitle}
+        metaDescription={formMetaDescription}
+        schemaMarkup={formSchemaMarkup}
+        hasImage={!!(formImage || croppedImageUrl || (formImageSource === 'favicon' && formFaviconUrl.trim()))}
+        slugError={slugError}
+        schemaMarkupError={schemaMarkupError}
+        isEditMode={checklistMode === 'edit'}
+        onConfirm={() => {
+          setChecklistMode(null)
+          if (checklistMode === 'add') handleAddTool()
+          else handleEditTool()
+        }}
+        onCancel={() => setChecklistMode(null)}
+      />
 
       {/* Image Cropper Dialog */}
       <ImageCropper

@@ -22,4 +22,5 @@ export const TABLES = {
   CATEGORIES: 'categories',
   MESSAGES: 'admin_messages',
   ANALYTICS: 'analytics',
+  SEO_SETTINGS: 'site_seo_settings',
 } as const

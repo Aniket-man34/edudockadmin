@@ -7,6 +7,7 @@ import {
   Wrench,
   Folder,
   MessageSquare,
+  Search,
   X,
   ChevronLeft,
   ChevronRight,
@@ -33,6 +34,7 @@ const Sidebar: React.FC<SidebarProps> = ({
     { name: 'Manage Tools', path: '/tools', icon: Wrench },
     { name: 'Manage Categories', path: '/categories', icon: Folder },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
+    { name: 'SEO Settings', path: '/seo', icon: Search },
   ]
 
   return (

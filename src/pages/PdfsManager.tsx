@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
+import { format } from 'date-fns'
 import { v4 as uuidv4 } from 'uuid'
 import {
   Plus,
@@ -37,6 +38,7 @@ import {
 import ImageUploader from '@/components/shared/ImageUploader'
 import { ImageCropper } from '@/components/shared/ImageCropper'
 import GoogleSearchPreview from '@/components/shared/GoogleSearchPreview'
+import PublishingChecklistModal from '@/components/shared/PublishingChecklistModal'
 import InlineCategoryCreator from '@/components/shared/InlineCategoryCreator'
 import { useToast } from '@/hooks/use-toast'
 import { supabase, STORAGE_BUCKETS, TABLES } from '@/lib/supabase'
@@ -80,12 +82,52 @@ const PdfsManager: React.FC = () => {
   const [formMetaDescription, setFormMetaDescription] = useState('')
   const [formSchemaMarkup, setFormSchemaMarkup] = useState('')
 
+  // Slug validation error state
+  const [slugError, setSlugError] = useState<string>('')
+  // Schema markup JSON validation error state
+  const [schemaMarkupError, setSchemaMarkupError] = useState<string>('')
+
+  // Publishing checklist modal state ('add' | 'edit' | null)
+  const [checklistMode, setChecklistMode] = useState<'add' | 'edit' | null>(null)
+
   // Track if admin has manually edited the slug manually (disables auto-generation)
   const slugManuallyEdited = useRef(false)
 
   // Inline Category Creation state
   const [isAddingCategory, setIsAddingCategory] = useState(false)
   const [newCategoryName, setNewCategoryName] = useState('')
+
+  // Mouse drag-to-scroll implementation
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [isDragging, setIsDragging] = useState(false)
+  const [startX, setStartX] = useState(0)
+  const [scrollLeft, setScrollLeft] = useState(0)
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    setIsDragging(true)
+    setStartX(e.pageX - container.offsetLeft)
+    setScrollLeft(container.scrollLeft)
+  }
+
+  const handleMouseLeave = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseUp = () => {
+    setIsDragging(false)
+  }
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    if (!isDragging) return
+    e.preventDefault()
+    const container = scrollContainerRef.current
+    if (!container) return
+    const x = e.pageX - container.offsetLeft
+    const walk = (x - startX) * 1.5 // Scroll speed multiplier
+    container.scrollLeft = scrollLeft - walk
+  }
 
   // Generate a URL-friendly slug from a title string
   const generateSlug = useCallback((title: string) => {
@@ -96,6 +138,54 @@ const PdfsManager: React.FC = () => {
       .replace(/-+/g, '-')           // collapse multiple hyphens
       .replace(/^-|-$/g, '')         // trim leading/trailing hyphens
   }, [])
+
+  // Validate slug: regex format + uniqueness check against DB
+  const validateSlug = useCallback(async (slug: string, excludeId?: string) => {
+    const trimmed = slug.trim()
+    if (!trimmed) {
+      setSlugError('')
+      return true
+    }
+    // Regex: only lowercase letters, digits, hyphens
+    if (!/^[a-z0-9-]+$/.test(trimmed)) {
+      setSlugError('Slug must only contain lowercase letters, digits, and hyphens (a-z, 0-9, -).')
+      return false
+    }
+    // Uniqueness check against DB
+    try {
+      const query = supabase
+        .from(TABLES.PDFS)
+        .select('id')
+        .eq('slug', trimmed)
+      const { data } = excludeId
+        ? await query.neq('id', excludeId)
+        : await query
+      if (data && data.length > 0) {
+        setSlugError('This slug is already in use by another PDF.')
+        return false
+      }
+    } catch {
+      // If uniqueness check fails, allow submission (DB constraint will catch it)
+      console.warn('Slug uniqueness check failed, proceeding anyway')
+    }
+    setSlugError('')
+    return true
+  }, [])
+
+  // Validate schema markup JSON on blur
+  const validateSchemaMarkup = useCallback(() => {
+    const trimmed = formSchemaMarkup.trim()
+    if (!trimmed) {
+      setSchemaMarkupError('')
+      return
+    }
+    try {
+      JSON.parse(trimmed)
+      setSchemaMarkupError('')
+    } catch (e) {
+      setSchemaMarkupError(`Invalid JSON: ${(e as Error).message}`)
+    }
+  }, [formSchemaMarkup])
 
   const pdfFileInputRef = useRef<HTMLInputElement>(null)
   const { toast } = useToast()
@@ -229,6 +319,8 @@ const PdfsManager: React.FC = () => {
     setFormMetaTitle('')
     setFormMetaDescription('')
     setFormSchemaMarkup('')
+    setSlugError('')
+    setSchemaMarkupError('')
     // Reset cropping state
     setCroppingImage(false)
     setTempImage(null)
@@ -259,7 +351,7 @@ const PdfsManager: React.FC = () => {
     setFormSlug(pdf.slug || '')
     setFormMetaTitle(pdf.meta_title || '')
     setFormMetaDescription(pdf.meta_description || '')
-    setFormSchemaMarkup(pdf.schema_markup || '')
+    setFormSchemaMarkup(pdf.schema_markup ? JSON.stringify(pdf.schema_markup, null, 2) : '')
     setIsEditDialogOpen(true)
   }
 
@@ -334,6 +426,10 @@ const PdfsManager: React.FC = () => {
 
   // Handle Add PDF
   const handleAddPdf = async () => {
+    // Validate slug format and uniqueness before submission
+    if (formSlug.trim() && !await validateSlug(formSlug)) {
+      return
+    }
     if (!formTitle.trim() || !formDescription.trim()) {
       toast({
         title: 'Validation Error',
@@ -434,7 +530,7 @@ const PdfsManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
-          schema_markup: formSchemaMarkup.trim() || null,
+          schema_markup: formSchemaMarkup.trim() ? JSON.parse(formSchemaMarkup.trim()) : null,
         })
 
       if (insertError) throw insertError
@@ -462,6 +558,10 @@ const PdfsManager: React.FC = () => {
 
   // Handle Edit PDF
   const handleEditPdf = async () => {
+    // Validate slug format and uniqueness before submission (exclude current record)
+    if (formSlug.trim() && !await validateSlug(formSlug, selectedPdf?.id)) {
+      return
+    }
     if (!selectedPdf || !formTitle.trim() || !formDescription.trim()) {
       toast({
         title: 'Validation Error',
@@ -568,7 +668,7 @@ const PdfsManager: React.FC = () => {
           slug: formSlug.trim() || null,
           meta_title: formMetaTitle.trim() || null,
           meta_description: formMetaDescription.trim() || null,
-          schema_markup: formSchemaMarkup.trim() || null,
+          schema_markup: formSchemaMarkup.trim() ? JSON.parse(formSchemaMarkup.trim()) : null,
         })
         .eq('id', selectedPdf.id)
 
@@ -641,6 +741,14 @@ const PdfsManager: React.FC = () => {
         description: 'Failed to delete PDF. Please try again.',
         variant: 'destructive',
       })
+    }
+  }
+
+  const formatDate = (dateString: string) => {
+    try {
+      return format(new Date(dateString), 'MMM dd, yyyy')
+    } catch {
+      return dateString
     }
   }
 
@@ -719,27 +827,37 @@ const PdfsManager: React.FC = () => {
         </Button>
       </div>
 
-      <div className="border rounded-lg overflow-x-auto">
+      <div
+        ref={scrollContainerRef}
+        onMouseDown={handleMouseDown}
+        onMouseLeave={handleMouseLeave}
+        onMouseUp={handleMouseUp}
+        onMouseMove={handleMouseMove}
+        className={`border rounded-lg overflow-x-auto select-none ${
+          isDragging ? 'cursor-grabbing' : 'cursor-grab'
+        }`}
+      >
         <Table>
           <TableHeader>
             <TableRow>
               <TableHead className="w-[80px]">Cover</TableHead>
               <TableHead>Title</TableHead>
-              <TableHead className="hidden sm:table-cell">Description</TableHead>
+              <TableHead className="hidden sm:table-cell">Category</TableHead>
+              <TableHead className="hidden lg:table-cell">Date</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin mx-auto text-gray-400" />
                   <p className="mt-2 text-sm text-gray-500">Loading PDFs...</p>
                 </TableCell>
               </TableRow>
             ) : filteredPdfs.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   <FileText className="h-8 w-8 mx-auto text-gray-400" />
                   <p className="mt-2 text-sm text-gray-500">No PDFs found</p>
                 </TableCell>
@@ -752,29 +870,40 @@ const PdfsManager: React.FC = () => {
                       <img
                         src={pdf.cover_image_url}
                         alt={pdf.title}
-                        className="w-16 h-20 object-cover rounded border"
+                        className="w-16 h-20 object-cover rounded border border-gray-200 shadow-sm"
                       />
                     ) : (
-                      <div className="w-16 h-20 flex items-center justify-center rounded border bg-gray-100">
+                      <div className="w-16 h-20 flex items-center justify-center rounded border bg-gray-100 border-gray-200 shadow-sm">
                         <FileText className="h-6 w-6 text-gray-400" />
                       </div>
                     )}
                   </TableCell>
-                  <TableCell className="font-medium max-w-[200px] truncate">
+                  <TableCell className="font-medium max-w-xs truncate block">
                     {pdf.title}
                   </TableCell>
-                  <TableCell className="hidden sm:table-cell max-w-[300px] truncate">
-                    {pdf.description}
+                  <TableCell className="hidden sm:table-cell">
+                    {pdf.category_id && categories.find(c => c.id === pdf.category_id) ? (
+                      <span className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-purple-100 text-purple-700">
+                        {categories.find(c => c.id === pdf.category_id)?.name}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-gray-400">—</span>
+                    )}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell">
+                    {formatDate(pdf.created_at)}
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-1 md:gap-2">
-                      {pdf.file_url && (
-                        <Button variant="ghost" size="icon" asChild className="min-h-[44px] min-w-[44px]">
-                          <a href={pdf.file_url} target="_blank" rel="noopener noreferrer">
-                            <Eye className="h-4 w-4" />
-                          </a>
-                        </Button>
-                      )}
+                      <Button variant="ghost" size="icon" asChild className="min-h-[44px] min-w-[44px]">
+                        <a
+                          href={`https://edudock.in/pdfs/${pdf.slug || ''}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </a>
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -964,6 +1093,7 @@ const PdfsManager: React.FC = () => {
                   title={formMetaTitle || formTitle}
                   slug={formSlug}
                   description={formMetaDescription || formDescription}
+                  section="pdf"
                 />
 
                 {/* Slug */}
@@ -976,10 +1106,20 @@ const PdfsManager: React.FC = () => {
                     onChange={(e) => {
                       slugManuallyEdited.current = true
                       setFormSlug(e.target.value)
+                      // Clear error while typing
+                      if (slugError) setSlugError('')
                     }}
+                    onBlur={() => validateSlug(formSlug)}
+                    className={slugError ? 'border-red-400 focus:border-red-500' : ''}
                   />
+                  {slugError && (
+                    <p className="text-xs text-red-500 font-medium">{slugError}</p>
+                  )}
+                  {!slugError && formSlug && /^[a-z0-9-]+$/.test(formSlug.trim()) && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid slug format</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    URL-friendly identifier. Leave empty to auto-generate.
+                    URL-friendly identifier. Only lowercase letters, digits, and hyphens. Leave empty to auto-generate.
                   </p>
                 </div>
 
@@ -1039,16 +1179,34 @@ const PdfsManager: React.FC = () => {
                 {/* Schema Markup (JSON-LD) */}
                 <div className="space-y-1">
                   <Label htmlFor="add-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <div className="flex gap-2 flex-wrap mb-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      Article
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "LearningResource", "name": formTitle, "description": formDescription, "educationalLevel": "Higher Education", "learningResourceType": "PDF" }, null, 2)); setSchemaMarkupError(''); }}>
+                      LearningResource
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "CreativeWork", "name": formTitle, "description": formDescription, "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      CreativeWork
+                    </Button>
+                  </div>
                   <Textarea
                     id="add-schema-markup"
-                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [{\n    "@type": "Question",\n    "name": "Your question here?",\n    "acceptedAnswer": {\n      "@type": "Answer",\n      "text": "Your answer here."\n    }\n  }]\n}`}
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "LearningResource",\n  "name": "PDF Title",\n  "description": "PDF description",\n  "educationalLevel": "Higher Education",\n  "learningResourceType": "PDF"\n}`}
                     value={formSchemaMarkup}
-                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    onChange={(e) => { setFormSchemaMarkup(e.target.value); if (schemaMarkupError) setSchemaMarkupError(''); }}
+                    onBlur={validateSchemaMarkup}
                     rows={8}
-                    className="font-mono text-sm"
+                    className={`font-mono text-sm ${schemaMarkupError ? 'border-red-400 focus:border-red-500' : ''}`}
                   />
+                  {schemaMarkupError && (
+                    <p className="text-xs text-red-500 font-medium">{schemaMarkupError}</p>
+                  )}
+                  {!schemaMarkupError && formSchemaMarkup.trim() && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid JSON</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    Paste valid JSON-LD schema markup for Google Rich Snippets (FAQ, Article, BreadcrumbList, etc.).
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (Article, LearningResource, CreativeWork, etc.). Use the templates above to get started.
                   </p>
                 </div>
               </div>
@@ -1062,7 +1220,7 @@ const PdfsManager: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleAddPdf} disabled={isSubmitting}>
+            <Button onClick={() => { setChecklistMode('add') }} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1218,6 +1376,7 @@ const PdfsManager: React.FC = () => {
                   title={formMetaTitle || formTitle}
                   slug={formSlug}
                   description={formMetaDescription || formDescription}
+                  section="pdf"
                 />
 
                 {/* Slug */}
@@ -1230,10 +1389,19 @@ const PdfsManager: React.FC = () => {
                     onChange={(e) => {
                       slugManuallyEdited.current = true
                       setFormSlug(e.target.value)
+                      if (slugError) setSlugError('')
                     }}
+                    onBlur={() => validateSlug(formSlug, selectedPdf?.id)}
+                    className={slugError ? 'border-red-400 focus:border-red-500' : ''}
                   />
+                  {slugError && (
+                    <p className="text-xs text-red-500 font-medium">{slugError}</p>
+                  )}
+                  {!slugError && formSlug && /^[a-z0-9-]+$/.test(formSlug.trim()) && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid slug format</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    URL-friendly identifier. Leave empty to auto-generate.
+                    URL-friendly identifier. Only lowercase letters, digits, and hyphens. Leave empty to auto-generate.
                   </p>
                 </div>
 
@@ -1293,16 +1461,34 @@ const PdfsManager: React.FC = () => {
                 {/* Schema Markup (JSON-LD) */}
                 <div className="space-y-1">
                   <Label htmlFor="edit-schema-markup">Schema Markup (JSON-LD)</Label>
+                  <div className="flex gap-2 flex-wrap mb-1">
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      Article
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "LearningResource", "name": formTitle, "description": formDescription, "educationalLevel": "Higher Education", "learningResourceType": "PDF" }, null, 2)); setSchemaMarkupError(''); }}>
+                      LearningResource
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "CreativeWork", "name": formTitle, "description": formDescription, "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      CreativeWork
+                    </Button>
+                  </div>
                   <Textarea
                     id="edit-schema-markup"
-                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "FAQPage",\n  "mainEntity": [{\n    "@type": "Question",\n    "name": "Your question here?",\n    "acceptedAnswer": {\n      "@type": "Answer",\n      "text": "Your answer here."\n    }\n  }]\n}`}
+                    placeholder={`{\n  "@context": "https://schema.org",\n  "@type": "LearningResource",\n  "name": "PDF Title",\n  "description": "PDF description",\n  "educationalLevel": "Higher Education",\n  "learningResourceType": "PDF"\n}`}
                     value={formSchemaMarkup}
-                    onChange={(e) => setFormSchemaMarkup(e.target.value)}
+                    onChange={(e) => { setFormSchemaMarkup(e.target.value); if (schemaMarkupError) setSchemaMarkupError(''); }}
+                    onBlur={validateSchemaMarkup}
                     rows={8}
-                    className="font-mono text-sm"
+                    className={`font-mono text-sm ${schemaMarkupError ? 'border-red-400 focus:border-red-500' : ''}`}
                   />
+                  {schemaMarkupError && (
+                    <p className="text-xs text-red-500 font-medium">{schemaMarkupError}</p>
+                  )}
+                  {!schemaMarkupError && formSchemaMarkup.trim() && (
+                    <p className="text-xs text-green-600 font-medium">✓ Valid JSON</p>
+                  )}
                   <p className="text-xs text-gray-500">
-                    Paste valid JSON-LD schema markup for Google Rich Snippets (FAQ, Article, BreadcrumbList, etc.).
+                    Paste valid JSON-LD schema markup for Google Rich Snippets (Article, LearningResource, CreativeWork, etc.). Use the templates above to get started.
                   </p>
                 </div>
               </div>
@@ -1316,7 +1502,7 @@ const PdfsManager: React.FC = () => {
             >
               Cancel
             </Button>
-            <Button onClick={handleEditPdf} disabled={isSubmitting}>
+            <Button onClick={() => { setChecklistMode('edit') }} disabled={isSubmitting}>
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1329,6 +1515,28 @@ const PdfsManager: React.FC = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Publishing Checklist Modal */}
+      <PublishingChecklistModal
+        open={checklistMode !== null}
+        onOpenChange={(open) => { if (!open) setChecklistMode(null) }}
+        section="pdfs"
+        title={formTitle}
+        slug={formSlug}
+        metaTitle={formMetaTitle}
+        metaDescription={formMetaDescription}
+        schemaMarkup={formSchemaMarkup}
+        hasImage={!!(formCoverImage || croppedImageUrl)}
+        slugError={slugError}
+        schemaMarkupError={schemaMarkupError}
+        isEditMode={checklistMode === 'edit'}
+        onConfirm={() => {
+          setChecklistMode(null)
+          if (checklistMode === 'add') handleAddPdf()
+          else handleEditPdf()
+        }}
+        onCancel={() => setChecklistMode(null)}
+      />
 
       {/* Image Cropper Modal */}
       <ImageCropper

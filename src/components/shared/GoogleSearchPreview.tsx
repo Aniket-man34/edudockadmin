@@ -9,8 +9,8 @@ interface GoogleSearchPreviewProps {
   description: string
   /** Base domain for the breadcrumb */
   baseDomain?: string
-  /** The section/path segment */
-  section?: string
+  /** The section/path segment — REQUIRED, must adapt per content type: 'update' | 'pdf' | 'tool' */
+  section: string
 }
 
 /**
@@ -22,13 +22,18 @@ interface GoogleSearchPreviewProps {
  * Google's display limits:
  * - Title: ~60 characters (truncated with "…" if exceeded)
  * - Description: ~160 characters (truncated with "…" if exceeded)
+ *
+ * Visual feedback:
+ * - 🔴 Red border + badge when a field is completely empty
+ * - 🟠 Amber badge when a field exceeds truncation limits
+ * - 🟢 Green badge when a field is within recommended limits
  */
 const GoogleSearchPreview: React.FC<GoogleSearchPreviewProps> = ({
   title,
   slug,
   description,
   baseDomain = 'edudock.in',
-  section = 'update',
+  section,
 }) => {
   const TITLE_MAX = 60
   const DESC_MAX = 160
@@ -40,17 +45,57 @@ const GoogleSearchPreview: React.FC<GoogleSearchPreviewProps> = ({
       ? description.slice(0, DESC_MAX).trimEnd() + '…'
       : description
 
-  const displayTitle = truncateTitle || 'Untitled Update'
+  const hasTitle = title.trim().length > 0
+  const hasDescription = description.trim().length > 0
+
+  const titleExceeded = title.length > TITLE_MAX
+  const descExceeded = description.length > DESC_MAX
+
+  const displayTitle = truncateTitle || 'Untitled'
   const displaySlug = slug || 'untitled-slug'
   const displayDesc = truncateDesc || 'No description provided.'
 
-  // Build breadcrumb: edudock.in > update > [slug]
+  // Build breadcrumb: edudock.in > [section] > [slug]
   const breadcrumb = `${baseDomain} > ${section} > ${displaySlug}`
 
+  // Status indicators for each field
+  const titleStatus = !hasTitle ? 'empty' : titleExceeded ? 'truncated' : 'ok'
+  const descStatus = !hasDescription ? 'empty' : descExceeded ? 'truncated' : 'ok'
+
+  const statusBadge = (status: 'empty' | 'truncated' | 'ok') => {
+    switch (status) {
+      case 'empty':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-red-50 px-2 py-0.5 text-[10px] font-medium text-red-600 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-red-500" />
+            Missing
+          </span>
+        )
+      case 'truncated':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-medium text-amber-600 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+            Truncated
+          </span>
+        )
+      case 'ok':
+        return (
+          <span className="inline-flex items-center gap-1 rounded-full bg-green-50 px-2 py-0.5 text-[10px] font-medium text-green-600 whitespace-nowrap">
+            <span className="h-1.5 w-1.5 rounded-full bg-green-500" />
+            Good
+          </span>
+        )
+    }
+  }
+
+  const borderClass = !hasTitle || !hasDescription
+    ? 'border-red-300 bg-red-50/30'
+    : 'border-gray-200 bg-white'
+
   return (
-    <div className="w-full max-w-[600px] rounded-md border border-gray-200 bg-white p-4 shadow-sm">
-      {/* Header label */}
-      <div className="mb-2 flex items-center gap-2">
+    <div className={`w-full max-w-[600px] rounded-md border ${borderClass} p-4 shadow-sm transition-colors duration-300`}>
+      {/* Header label with status badges */}
+      <div className="mb-2 flex items-center gap-2 flex-wrap">
         <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
           Google Search Preview
         </span>
@@ -60,6 +105,10 @@ const GoogleSearchPreview: React.FC<GoogleSearchPreviewProps> = ({
           </svg>
           Live
         </span>
+        <div className="flex items-center gap-1.5 ml-auto">
+          {statusBadge(titleStatus)}
+          {statusBadge(descStatus)}
+        </div>
       </div>
 
       {/* Google-style result card */}
@@ -67,7 +116,9 @@ const GoogleSearchPreview: React.FC<GoogleSearchPreviewProps> = ({
         {/* Clickable blue title link */}
         <a
           href="#"
-          className="text-lg leading-tight text-[#1a0dab] hover:underline cursor-pointer"
+          className={`text-lg leading-tight hover:underline cursor-pointer transition-colors ${
+            !hasTitle ? 'text-gray-400' : 'text-[#1a0dab]'
+          }`}
           style={{ fontFamily: 'Arial, sans-serif' }}
           onClick={(e) => e.preventDefault()}
         >
@@ -84,11 +135,23 @@ const GoogleSearchPreview: React.FC<GoogleSearchPreviewProps> = ({
 
         {/* Description snippet in dark gray */}
         <p
-          className="text-sm leading-snug text-[#545454] mt-0.5"
+          className={`text-sm leading-snug mt-0.5 transition-colors ${
+            !hasDescription ? 'text-gray-400' : 'text-[#545454]'
+          }`}
           style={{ fontFamily: 'Arial, sans-serif', lineHeight: '1.4' }}
         >
           {displayDesc}
         </p>
+      </div>
+
+      {/* Character count indicators */}
+      <div className="mt-2 flex items-center gap-3 text-[10px] text-gray-400">
+        <span>
+          Title: <strong className={titleExceeded ? 'text-amber-600' : 'text-gray-600'}>{title.length}</strong>/{TITLE_MAX}
+        </span>
+        <span>
+          Desc: <strong className={descExceeded ? 'text-amber-600' : 'text-gray-600'}>{description.length}</strong>/{DESC_MAX}
+        </span>
       </div>
     </div>
   )
