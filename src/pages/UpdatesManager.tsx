@@ -998,10 +998,13 @@ const UpdatesManager: React.FC = () => {
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formContent?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
                       Article
                     </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "NewsArticle", "headline": formTitle, "description": formMetaDescription || formContent?.substring(0, 160) || "", "image": [], "author": { "@type": "Person", "name": fullName }, "publisher": { "@type": "Organization", "name": "EduDock", "logo": { "@type": "ImageObject", "url": "https://edudock.in/favicon.svg" } }, "datePublished": new Date().toISOString(), "dateModified": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      NewsArticle
+                    </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Your question here?", "acceptedAnswer": { "@type": "Answer", "text": "Your answer here." } }] }, null, 2)); setSchemaMarkupError(''); }}>
                       FAQ
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://edudock.com" }, { "@type": "ListItem", "position": 2, "name": formTitle, "item": `https://edudock.com/updates/${formSlug}` }] }, null, 2)); setSchemaMarkupError(''); }}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://edudock.in" }, { "@type": "ListItem", "position": 2, "name": formTitle, "item": `https://edudock.in/updates/${formSlug}` }] }, null, 2)); setSchemaMarkupError(''); }}>
                       Breadcrumb
                     </Button>
                   </div>
@@ -1240,10 +1243,13 @@ const UpdatesManager: React.FC = () => {
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formContent?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
                       Article
                     </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "NewsArticle", "headline": formTitle, "description": formMetaDescription || formContent?.substring(0, 160) || "", "image": [], "author": { "@type": "Person", "name": fullName }, "publisher": { "@type": "Organization", "name": "EduDock", "logo": { "@type": "ImageObject", "url": "https://edudock.in/favicon.svg" } }, "datePublished": new Date().toISOString(), "dateModified": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      NewsArticle
+                    </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "FAQPage", "mainEntity": [{ "@type": "Question", "name": "Your question here?", "acceptedAnswer": { "@type": "Answer", "text": "Your answer here." } }] }, null, 2)); setSchemaMarkupError(''); }}>
                       FAQ
                     </Button>
-                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://edudock.com" }, { "@type": "ListItem", "position": 2, "name": formTitle, "item": `https://edudock.com/updates/${formSlug}` }] }, null, 2)); setSchemaMarkupError(''); }}>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "BreadcrumbList", "itemListElement": [{ "@type": "ListItem", "position": 1, "name": "Home", "item": "https://edudock.in" }, { "@type": "ListItem", "position": 2, "name": formTitle, "item": `https://edudock.in/updates/${formSlug}` }] }, null, 2)); setSchemaMarkupError(''); }}>
                       Breadcrumb
                     </Button>
                   </div>

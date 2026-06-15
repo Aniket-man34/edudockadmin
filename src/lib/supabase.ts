@@ -1,10 +1,30 @@
 import { createClient } from '@supabase/supabase-js'
 
-// Placeholder values - replace with your actual Supabase credentials
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://your-project-id.supabase.co'
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-anon-key'
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+if (!supabaseUrl || !supabaseAnonKey) {
+  // Fail loudly at boot rather than silently using a placeholder client.
+  // A placeholder client lets the UI render but every query 404s, which
+  // produces empty tables and confused users instead of an actionable error.
+  const missing = [
+    !supabaseUrl && 'VITE_SUPABASE_URL',
+    !supabaseAnonKey && 'VITE_SUPABASE_ANON_KEY',
+  ]
+    .filter(Boolean)
+    .join(', ')
+  throw new Error(
+    `Supabase config missing: ${missing}. Set these in .env (admin) and rebuild.`,
+  )
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+  },
+})
 
 // Storage bucket names
 export const STORAGE_BUCKETS = {

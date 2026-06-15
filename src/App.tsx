@@ -13,37 +13,40 @@ import { AuthProvider } from './contexts/AuthContext'
 import { GlobalSearchProvider } from './contexts/GlobalSearchContext'
 import GlobalEditModal from './components/shared/GlobalEditModal'
 import ProtectedRoute from './components/auth/ProtectedRoute'
+import ErrorBoundary from './components/shared/ErrorBoundary'
 
 function App() {
   return (
-    <AuthProvider>
-      <GlobalSearchProvider>
-        <Router>
-          <GlobalEditModal />
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <AdminLayout />
-                </ProtectedRoute>
-              }
-            >
-              <Route index element={<Dashboard />} />
-              <Route path="pdfs" element={<PdfsManager />} />
-              <Route path="updates" element={<UpdatesManager />} />
-              <Route path="tools" element={<ToolsManager />} />
-              <Route path="categories" element={<CategoriesManager />} />
-              <Route path="messages" element={<MessagesManager />} />
-              <Route path="seo" element={<SeoSettings />} />
-            </Route>
-            <Route path="*" element={<Navigate to="/" />} />
-          </Routes>
-          <Toaster />
-        </Router>
-      </GlobalSearchProvider>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <GlobalSearchProvider>
+          <Router>
+            <GlobalEditModal />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <AdminLayout />
+                  </ProtectedRoute>
+                }
+              >
+                <Route index element={<Dashboard />} />
+                <Route path="pdfs" element={<PdfsManager />} />
+                <Route path="updates" element={<UpdatesManager />} />
+                <Route path="tools" element={<ToolsManager />} />
+                <Route path="categories" element={<CategoriesManager />} />
+                <Route path="messages" element={<MessagesManager />} />
+                <Route path="seo" element={<SeoSettings />} />
+              </Route>
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+            <Toaster />
+          </Router>
+        </GlobalSearchProvider>
+      </AuthProvider>
+    </ErrorBoundary>
   )
 }
 

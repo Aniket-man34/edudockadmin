@@ -1,23 +1,27 @@
 export interface Tool {
   id: string
   title: string
+  short_description: string | null // One-line tagline shown in cards & SEO snippets
   description: string
   url: string
   image_url: string | null
-  image_type: 'upload' | 'favicon' // Phase 3: upload = uploaded image, favicon = URL
-  favicon_url: string | null // Phase 3: Favicon URL when image_type = 'favicon'
-  author_name: string | null // Phase 5
-  author_avatar: string | null // Phase 5
-  category_id: string | null // Category reference
-  slug: string | null // URL-friendly slug
-  meta_title: string | null // SEO meta title (max ~60 chars)
-  meta_description: string | null // SEO meta description (max ~160 chars)
-  schema_markup: Record<string, unknown> | null // JSONB - JSON-LD schema markup for Google Rich Snippets
+  image_type: 'upload' | 'favicon'
+  favicon_url: string | null
+  author_name: string | null
+  author_avatar: string | null
+  category_id: string | null
+  slug: string | null
+  meta_title: string | null
+  meta_description: string | null
+  schema_markup: Record<string, unknown> | null
+  clicks: number | null
   created_at: string
+  updated_at: string | null
 }
 
 export interface CreateToolInput {
   title: string
+  short_description: string | null
   description: string
   url: string
   image: File | null

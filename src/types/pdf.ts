@@ -4,16 +4,18 @@ export interface Pdf {
   description: string
   file_url: string
   cover_image_url: string | null
-  file_type: 'upload' | 'drive' // Phase 3: upload = PDF file, drive = Google Drive link
-  drive_link: string | null // Phase 3: Google Drive link when file_type = 'drive'
-  author_name: string | null // Phase 5
-  author_avatar: string | null // Phase 5
-  category_id: string | null // Category reference
-  slug: string | null // URL-friendly slug
-  meta_title: string | null // SEO meta title (max ~60 chars)
-  meta_description: string | null // SEO meta description (max ~160 chars)
-  schema_markup: Record<string, unknown> | null // JSONB - JSON-LD schema markup for Google Rich Snippets
+  file_type: 'upload' | 'drive'
+  drive_link: string | null
+  author_name: string | null
+  author_avatar: string | null
+  category_id: string | null
+  slug: string | null
+  meta_title: string | null
+  meta_description: string | null
+  schema_markup: Record<string, unknown> | null
+  clicks: number | null
   created_at: string
+  updated_at: string | null
 }
 
 export interface CreatePdfInput {

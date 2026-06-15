@@ -1183,6 +1183,9 @@ const PdfsManager: React.FC = () => {
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
                       Article
                     </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "DigitalDocument", "name": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "fileFormat": "application/pdf", "author": { "@type": "Person", "name": fullName }, "publisher": { "@type": "Organization", "name": "EduDock", "logo": { "@type": "ImageObject", "url": "https://edudock.in/favicon.svg" } }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      DigitalDocument
+                    </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "LearningResource", "name": formTitle, "description": formDescription, "educationalLevel": "Higher Education", "learningResourceType": "PDF" }, null, 2)); setSchemaMarkupError(''); }}>
                       LearningResource
                     </Button>
@@ -1464,6 +1467,9 @@ const PdfsManager: React.FC = () => {
                   <div className="flex gap-2 flex-wrap mb-1">
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "Article", "headline": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "author": { "@type": "Person", "name": fullName }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
                       Article
+                    </Button>
+                    <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "DigitalDocument", "name": formTitle, "description": formMetaDescription || formDescription?.substring(0, 160) || "", "fileFormat": "application/pdf", "author": { "@type": "Person", "name": fullName }, "publisher": { "@type": "Organization", "name": "EduDock", "logo": { "@type": "ImageObject", "url": "https://edudock.in/favicon.svg" } }, "datePublished": new Date().toISOString() }, null, 2)); setSchemaMarkupError(''); }}>
+                      DigitalDocument
                     </Button>
                     <Button type="button" variant="outline" size="sm" onClick={() => { setFormSchemaMarkup(JSON.stringify({ "@context": "https://schema.org", "@type": "LearningResource", "name": formTitle, "description": formDescription, "educationalLevel": "Higher Education", "learningResourceType": "PDF" }, null, 2)); setSchemaMarkupError(''); }}>
                       LearningResource
