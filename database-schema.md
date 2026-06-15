@@ -16,9 +16,7 @@ This document serves as the official schema reference for the EduDock Supabase p
 Stores PDF resources with upload and Google Drive support.
 
 | Column Name | Data Type | Nullable | Default | Description |
-|-------------|------------|----------|----------|-------------|
-| id | uuid | NO | gen_random_uuid() | Primary key |
-| title | varchar | NO | - | PDF title |
+|-------------|-
 | description | text | YES | - | PDF description |
 | file_url | text | YES | - | URL to PDF file |
 | cover_image_url | text | YES | - | URL to cover image |
