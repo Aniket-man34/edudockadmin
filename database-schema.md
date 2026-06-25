@@ -13,8 +13,7 @@ This document serves as the official schema reference for the EduDock Supabase p
 ## Database Tables
 
 ### 1. `pdfs`
-Stores PDF resources with upload and Google Drive support.
-
+Stores 
 | Column Name | Data Type | Nullable | Default | Description |
 |-------------|-
 | description | text | YES | - | PDF description |
