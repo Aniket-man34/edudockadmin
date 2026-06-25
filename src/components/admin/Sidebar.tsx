@@ -8,6 +8,9 @@ import {
   Folder,
   MessageSquare,
   Search,
+  Image as ImageIcon,
+  HeartPulse,
+  Activity,
   X,
   ChevronLeft,
   ChevronRight,
@@ -34,7 +37,10 @@ const Sidebar: React.FC<SidebarProps> = ({
     { name: 'Manage Tools', path: '/tools', icon: Wrench },
     { name: 'Manage Categories', path: '/categories', icon: Folder },
     { name: 'Messages', path: '/messages', icon: MessageSquare },
+    { name: 'Media Library', path: '/media', icon: ImageIcon },
     { name: 'SEO Settings', path: '/seo', icon: Search },
+    { name: 'Site Health', path: '/health', icon: HeartPulse },
+    { name: 'Activity Logs', path: '/activity', icon: Activity },
   ]
 
   return (

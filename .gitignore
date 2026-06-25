@@ -3,6 +3,8 @@ node_modules/
 
 # production build
 dist/
+docs/
+migrations/
 
 # environment variables
 .env

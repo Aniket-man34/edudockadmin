@@ -7,6 +7,9 @@ import ToolsManager from './pages/ToolsManager'
 import CategoriesManager from './pages/CategoriesManager'
 import MessagesManager from './pages/MessagesManager'
 import SeoSettings from './pages/SeoSettings'
+import MediaLibrary from './pages/MediaLibrary'
+import SiteHealth from './pages/SiteHealth'
+import ActivityLogs from './pages/ActivityLogs'
 import Login from './pages/Login'
 import { Toaster } from './components/ui/toaster'
 import { AuthProvider } from './contexts/AuthContext'
@@ -39,6 +42,9 @@ function App() {
                 <Route path="categories" element={<CategoriesManager />} />
                 <Route path="messages" element={<MessagesManager />} />
                 <Route path="seo" element={<SeoSettings />} />
+                <Route path="media" element={<MediaLibrary />} />
+                <Route path="health" element={<SiteHealth />} />
+                <Route path="activity" element={<ActivityLogs />} />
               </Route>
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
