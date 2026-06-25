@@ -10,7 +10,6 @@ import {
   EyeOff,
   Clock,
   RotateCcw,
-  Trash2,
   X,
   FileText,
 } from 'lucide-react'

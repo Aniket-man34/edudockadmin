@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/refs */
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 export interface AutosaveOptions {

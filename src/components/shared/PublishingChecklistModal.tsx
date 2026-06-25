@@ -123,8 +123,8 @@ const PublishingChecklistModal: React.FC<PublishingChecklistProps> = ({
   }
 
   // 6. Image / Cover
-  let imageStatus: ChecklistItem['status'] = hasImage ? 'pass' : 'fail'
-  let imageDetail = hasImage
+  const imageStatus: ChecklistItem['status'] = hasImage ? 'pass' : 'fail'
+  const imageDetail = hasImage
     ? section === 'tools'
       ? 'Tool image is present'
       : 'Cover image is present'

@@ -6,7 +6,6 @@ import {
   ChevronLeft,
   ChevronRight,
   ArrowUpDown,
-  Trash2,
   Loader2,
   Inbox,
 } from 'lucide-react'

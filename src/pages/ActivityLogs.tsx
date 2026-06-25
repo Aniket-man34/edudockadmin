@@ -8,7 +8,6 @@ import {
   Archive,
   RotateCcw,
   Calendar,
-  Loader2,
   Filter,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'

@@ -8,7 +8,10 @@ import { cn } from '@/lib/utils'
  * dependency. Used by DataTable and any bulk-select UI.
  */
 export interface CheckboxProps
-  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
+  extends Omit<
+    React.InputHTMLAttributes<HTMLInputElement>,
+    'checked' | 'onChange'
+  > {
   checked?: boolean | 'indeterminate'
   onCheckedChange?: (checked: boolean | 'indeterminate') => void
 }

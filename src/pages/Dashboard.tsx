@@ -17,7 +17,6 @@ import {
   TrendingUp,
   Eye,
   Edit3,
-  Trash2,
   ArrowRight,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -232,15 +231,15 @@ const Dashboard: React.FC = () => {
       ])
 
       const combined: RecentItem[] = [
-        ...(pdfs.data || []).map((p: any) => ({
+        ...(pdfs.data || []).map((p) => ({
           ...p,
           type: 'pdf' as const,
         })),
-        ...(updates.data || []).map((u: any) => ({
+        ...(updates.data || []).map((u) => ({
           ...u,
           type: 'update' as const,
         })),
-        ...(tools.data || []).map((t: any) => ({
+        ...(tools.data || []).map((t) => ({
           ...t,
           type: 'tool' as const,
         })),
